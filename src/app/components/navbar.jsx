@@ -41,7 +41,7 @@ const Navbar = () => {
             </button>
             <div className="flex items-center  gap-2">
               <img src="/images/logo.png" alt="LexVizo" className="w-10 h-10" />
-              <h1 className="text-xl hidden md:block  md:text-2xl font-black bg-linear-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600 bg-clip-text text-transparent tracking-wider">
+              <h1 className="text-xl hidden md:block  md:text-2xl font-black bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent tracking-wider">
                 LexVizo
               </h1>
             </div>
@@ -74,14 +74,14 @@ const Navbar = () => {
           <div className="flex gap-4">
             <Button
               onClick={() => signOut()}
-              className=" bg-linear-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white font-semibold px-6 py-3 rounded-sm  shadow-sm hover:shadow-sm transition-all duration-300 hover:scale-105 "
+              className=" bg-gradient-to-r from-amber-400 to-orange-500 text-white font-semibold px-6 py-3 rounded-sm  shadow-sm hover:shadow-sm transition-all duration-300 hover:scale-105 "
             >
               login
             </Button>
             <Button
               variant="tertiary"
               className="
-                    bg-linear-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white font-semibold px-6 py-3 rounded-sm shadow-sm hover:shadow-sm transition-all duration-300 hover:scale-105 "
+                    bg-gradient-to-r from-amber-400 to-orange-500 text-white font-semibold px-6 py-3 rounded-sm shadow-sm hover:shadow-sm transition-all duration-300 hover:scale-105 "
             >
               Register
             </Button>
