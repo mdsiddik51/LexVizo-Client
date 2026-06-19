@@ -1,5 +1,6 @@
 "use client"
 import React, { useState, useEffect, useRef } from 'react';
+import { motion, useTransform, useScroll } from "framer-motion";
 import {
   FaGavel,
   FaBriefcase,
@@ -9,10 +10,31 @@ import {
   FaFileInvoiceDollar,
 } from "react-icons/fa";
 
+const scrollContainerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1, delayChildren: 0.05 }
+  }
+};
+
+const scrollItemVariants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: [0.215, 0.610, 0.355, 1.000] }
+  }
+};
+
 const Home = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const progressRef = useRef(null);
+
+  const { scrollY } = useScroll();
+  const backgroundY = useTransform(scrollY, [0, 500], [0, 100]);
+  const foregroundY = useTransform(scrollY, [0, 500], [0, -50]);
 
   const slides = [
     {
@@ -64,66 +86,26 @@ const Home = () => {
   ];
 
   const categories = [
-    {
-      title: "Criminal Law",
-      desc: "Defense against state and federal charges.",
-      icon: FaGavel,
-    },
-    {
-      title: "Corporate Law",
-      desc: "Mergers, acquisitions, and corporate governance.",
-      icon: FaBriefcase,
-    },
-    {
-      title: "Family Law",
-      desc: "Divorce, custody, and family estate planning.",
-      icon: FaUsers,
-    },
-    {
-      title: "Intellectual Property",
-      desc: "Patents, trademarks, and copyright protection.",
-      icon: FaLightbulb,
-    },
-    {
-      title: "Real Estate Law",
-      desc: "Commercial and residential property transactions.",
-      icon: FaHome,
-    },
-    {
-      title: "Tax Law",
-      desc: "Corporate taxation, IRS disputes, and structuring.",
-      icon: FaFileInvoiceDollar,
-    },
+    { title: "Criminal Law", desc: "Defense against state and federal charges.", icon: FaGavel },
+    { title: "Corporate Law", desc: "Mergers, acquisitions, and corporate governance.", icon: FaBriefcase },
+    { title: "Family Law", desc: "Divorce, custody, and family estate planning.", icon: FaUsers },
+    { title: "Intellectual Property", desc: "Patents, trademarks, and copyright protection.", icon: FaLightbulb },
+    { title: "Real Estate Law", desc: "Commercial and residential property transactions.", icon: FaHome },
+    { title: "Tax Law", desc: "Corporate taxation, IRS disputes, and structuring.", icon: FaFileInvoiceDollar },
   ];
 
   const features = [
-    {
-      title: "Expert Legal Guidance",
-      desc: "Get reliable advice from experienced legal professionals across multiple practice areas.",
-      icon: "⚖️",
-    },
-    {
-      title: "Client-Focused Approach",
-      desc: "We prioritize your needs and ensure every case receives personalized attention.",
-      icon: "🤝",
-    },
-    {
-      title: "Fast Case Resolution",
-      desc: "Efficient strategies designed to resolve your legal matters quickly and effectively.",
-      icon: "⏱️",
-    },
-    {
-      title: "Trusted & Transparent",
-      desc: "Clear communication and honest legal support you can depend on.",
-      icon: "🔍",
-    },
+    { title: "Expert Legal Guidance", desc: "Get reliable advice from experienced legal professionals across multiple practice areas.", icon: "⚖️" },
+    { title: "Client-Focused Approach", desc: "We prioritize your needs and ensure every case receives personalized attention.", icon: "🤝" },
+    { title: "Fast Case Resolution", desc: "Efficient strategies designed to resolve your legal matters quickly and effectively.", icon: "⏱️" },
+    { title: "Trusted & Transparent", desc: "Clear communication and honest legal support you can depend on.", icon: "🔍" },
   ];
+
+  const current = slides[currentSlide] || slides[0];
 
   const handleSlideChange = (nextIndex) => {
     if (isAnimating || nextIndex === currentSlide) return;
     setIsAnimating(true);
-
-
     setTimeout(() => {
       setCurrentSlide(nextIndex);
       setIsAnimating(false);
@@ -138,29 +120,26 @@ const Home = () => {
   }, [currentSlide, isAnimating]);
 
   return (
-    <div>
-      <div className="relative w-full h-175 md:h-212.5 bg-[#070A10] text-white overflow-hidden font-sans select-none flex flex-col justify-between">
-
-
-        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+      <div className="relative w-full min-h-[90vh] md:min-h-screen bg-[#06090e] text-white overflow-hidden font-sans select-none flex flex-col justify-between">
+        <motion.div style={{ y: backgroundY }} className="absolute inset-0 overflow-hidden pointer-events-none z-0">
           <div
-            className="absolute w-125 h-125 rounded-full bg-amber-500/5 blur-[120px] transition-all duration-1000 ease-in-out"
+            className="absolute w-[140vw] sm:w-[800px] h-[800px] rounded-full bg-amber-500/5 blur-[140px] transition-all duration-1000 ease-in-out"
             style={{
-              top: currentSlide === 0 ? '10%' : currentSlide === 1 ? '30%' : '-10%',
-              left: currentSlide === 0 ? '5%' : currentSlide === 1 ? '50%' : '30%',
+              top: currentSlide === 0 ? '-10%' : currentSlide === 1 ? '20%' : '-30%',
+              left: currentSlide === 0 ? '-10%' : currentSlide === 1 ? '40%' : '20%',
             }}
           />
           <div
-            className="absolute w-150 h-150 rounded-full bg-blue-600/3 blur-[150px] transition-all duration-1000 ease-in-out"
+            className="absolute w-[120vw] sm:w-[900px] h-[900px] rounded-full bg-blue-500/4 blur-[160px] transition-all duration-1000 ease-in-out"
             style={{
-              bottom: currentSlide === 0 ? '-10%' : '20%',
-              right: currentSlide === 0 ? '10%' : '40%',
+              bottom: currentSlide === 0 ? '-20%' : '10%',
+              right: currentSlide === 0 ? '-10%' : '30%',
             }}
           />
-        </div>
+        </motion.div>
 
-
-        <div className="absolute inset-0 opacity-[0.03] pointer-events-none z-0">
+        <div className="absolute inset-0 opacity-[0.02] pointer-events-none z-0">
           <div className="max-w-7xl mx-auto h-full w-full border-x border-white flex justify-between">
             <div className="w-px h-full bg-white" />
             <div className="w-px h-full bg-white" />
@@ -168,86 +147,87 @@ const Home = () => {
           </div>
         </div>
 
-
         <div className="relative z-20 max-w-7xl w-full mx-auto px-6 md:px-12 pt-8 flex justify-between items-center text-[10px] tracking-[0.4em] text-slate-500 uppercase font-mono">
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-            <span>Vanguard Legal Group</span>
+            <span>Vanguard Legal Network</span>
           </div>
-          <div className="hidden sm:block">Global Strategy / Private Practice</div>
+          <div className="hidden sm:block">On-Demand Counsel / Enterprise Access</div>
         </div>
 
-
-        <div className="relative z-10 max-w-7xl w-full mx-auto px-6 md:px-12 grid grid-cols-1 lg:grid-cols-12 items-center gap-16 my-auto layout-container">
-
-          <div className={`lg:col-span-7 space-y-6 md:space-y-8 transition-all duration-500 ease-out ${isAnimating ? 'opacity-0 translate-y-4 filter blur-sm' : 'opacity-100 translate-y-0 filter blur-none'
-            }`}>
+        <motion.div style={{ y: foregroundY }} className="relative z-10 max-w-7xl w-full mx-auto px-6 md:px-12 grid grid-cols-1 lg:grid-cols-12 items-center gap-12 lg:gap-16 my-auto py-12 md:py-20">
+          <div className={`lg:col-span-7 space-y-6 md:space-y-8 transition-all duration-700 ease-out ${
+            isAnimating ? 'opacity-0 translate-y-6 filter blur-md' : 'opacity-100 translate-y-0 filter blur-none'
+          }`}>
             <div className="flex items-center gap-3">
-              <div className="h-px w-8 bg-amber-400/50" />
-              <span className="text-[11px] font-mono tracking-[0.35em] text-amber-400 font-medium">
-                {slides[currentSlide].tagline}
+              <div className="h-px w-8 bg-amber-400/40" />
+              <span className="text-[11px] font-mono tracking-[0.35em] text-amber-400 font-semibold uppercase">
+                {current.tagline}
               </span>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl tracking-tight font-serif leading-[1.1] text-slate-100 font-light">
-              {slides[currentSlide].title}
-              <span className="block font-sans text-slate-400 text-3xl sm:text-4xl md:text-5xl mt-3 tracking-normal font-light">
-                {slides[currentSlide].subtitle}
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-[5.25rem] tracking-tight font-serif leading-[1.05] text-slate-100 font-light">
+              Find & Hire Expert
+              <span className="block font-sans text-transparent bg-clip-text bg-gradient-to-r from-slate-200 via-slate-400 to-slate-500 font-normal mt-2 tracking-tight">
+                Legal Counsel.
               </span>
             </h1>
 
             <p className="text-slate-400 font-light text-base md:text-lg max-w-xl leading-relaxed">
-              {slides[currentSlide].description}
+              {current.description}
             </p>
 
-            <div className="pt-4 flex flex-wrap items-center gap-6 sm:gap-10">
-              <button className="group relative px-8 py-4 bg-white text-black text-xs font-mono font-semibold tracking-[0.2em] uppercase overflow-hidden transition-all duration-300 hover:bg-amber-400 hover:text-black shadow-2xl shadow-black/50">
-                <span className="relative z-10 flex items-center gap-3">
-                  Retain Firm
-                  <svg className="w-3.5 h-3.5 transform transition-transform group-hover:translate-x-1.5 duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </span>
-              </button>
+            <div className="pt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-6">
+              <motion.button 
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="group relative px-8 py-4.5 bg-amber-400 text-black text-xs font-mono font-bold tracking-[0.2em] uppercase overflow-hidden transition-all duration-300 hover:bg-white shadow-2xl shadow-amber-400/10 flex justify-center items-center gap-3"
+              >
+                Browse Lawyers
+                <svg className="w-3.5 h-3.5 transform transition-transform group-hover:translate-x-1.5 duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </motion.button>
 
-              <button className="group text-[11px] tracking-[0.25em] uppercase font-mono font-medium text-slate-400 hover:text-white transition-colors duration-300 flex items-center gap-2 py-2">
-                <span>Case Studies</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-600 group-hover:bg-amber-400 transition-colors" />
-              </button>
+              <motion.button 
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="group px-8 py-4.5 border border-slate-800 bg-slate-950/40 hover:bg-slate-900 text-slate-300 hover:text-white text-xs font-mono font-medium tracking-[0.2em] uppercase transition-all duration-300 flex justify-center items-center gap-2"
+              >
+                Corporate Retainers
+              </motion.button>
             </div>
           </div>
 
-
           <div className="hidden lg:col-span-5 lg:flex flex-col items-end justify-center">
-            <div className={`w-80 h-80 border border-slate-800/60 bg-slate-950/20 backdrop-blur-md p-8 flex flex-col justify-between relative group transition-all duration-700 ease-out hover:border-amber-400/30 shadow-3xl ${isAnimating ? 'opacity-0 scale-95 rotate-1' : 'opacity-100 scale-100 rotate-0'
-              }`}>
-
-              <div className="absolute -top-px -left-px w-3 h-0.5 bg-slate-700 group-hover:bg-amber-400 transition-colors" />
-              <div className="absolute -top-px -left-px w-px h-3 bg-slate-700 group-hover:bg-amber-400 transition-colors" />
-              <div className="absolute -bottom-px -right-px w-3 h-px bg-slate-700 group-hover:bg-amber-400 transition-colors" />
-              <div className="absolute -bottom-px -right-px w-px h-3 bg-slate-700 group-hover:bg-amber-400 transition-colors" />
+            <div className={`w-85 h-96 border border-slate-900 bg-gradient-to-b from-slate-950/60 to-slate-950/20 backdrop-blur-xl p-8 flex flex-col justify-between relative group transition-all duration-700 ease-out hover:border-amber-400/20 shadow-3xl ${
+              isAnimating ? 'opacity-0 scale-95 translate-x-4' : 'opacity-100 scale-100 translate-x-0'
+            }`}>
+              <div className="absolute top-0 left-0 w-4 h-px bg-slate-800 group-hover:bg-amber-400/60 transition-colors" />
+              <div className="absolute top-0 left-0 w-px h-4 bg-slate-800 group-hover:bg-amber-400/60 transition-colors" />
+              <div className="absolute bottom-0 right-0 w-4 h-px bg-slate-800 group-hover:bg-amber-400/60 transition-colors" />
+              <div className="absolute bottom-0 right-0 w-px h-4 bg-slate-800 group-hover:bg-amber-400/60 transition-colors" />
 
               <div className="flex justify-between items-start">
-                <div className="p-3.5 bg-[#0e131f] border border-slate-800 shadow-inner group-hover:border-amber-500/20 transition-colors">
-                  {slides[currentSlide].icon}
+                <div className="p-4 bg-slate-900/60 border border-slate-800 shadow-inner group-hover:border-amber-500/20 transition-colors text-amber-400">
+                  {current.icon}
                 </div>
-                <span className="text-5xl font-mono font-thin text-slate-800 group-hover:text-slate-700 transition-colors select-none">
-                  {slides[currentSlide].id}
+                <span className="text-6xl font-mono font-thin text-slate-900 group-hover:text-slate-800 transition-colors select-none">
+                  {current.id}
                 </span>
               </div>
 
-              <div className="space-y-2">
-                <div className="text-[10px] tracking-[0.3em] text-amber-400 font-mono font-medium">// CORE STRATEGY</div>
+              <div className="space-y-3">
+                <div className="text-[10px] tracking-[0.3em] text-amber-400 font-mono font-semibold">// FIRM DISCOVERY VETTING</div>
                 <p className="text-xs text-slate-400 font-light leading-relaxed tracking-wide">
-                  {slides[currentSlide].methodology}
+                  {current.methodology}
                 </p>
               </div>
             </div>
           </div>
+        </motion.div>
 
-        </div>
-
-        <div className="relative z-20 border-t border-slate-900 bg-[#080c14]/40 backdrop-blur-xl">
+        <div className="relative z-20 border-t border-slate-900/60 bg-[#06090e]/80 backdrop-blur-2xl">
           <div className="max-w-7xl mx-auto px-6 py-6 md:py-8 grid grid-cols-3 gap-6 md:gap-12">
             {slides.map((slide, index) => {
               const isActive = index === currentSlide;
@@ -257,28 +237,21 @@ const Home = () => {
                   onClick={() => handleSlideChange(index)}
                   className="cursor-pointer group relative pt-4 flex flex-col gap-2 transition-all duration-300"
                 >
-
-                  <div className="absolute top-0 left-0 w-full h-px bg-slate-800/60 group-hover:bg-slate-700/60 transition-colors">
+                  <div className="absolute top-0 left-0 w-full h-px bg-slate-900 group-hover:bg-slate-800/80 transition-colors">
                     <div
                       ref={isActive ? progressRef : null}
-                      className={`h-0.5 bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.4)] rounded-full transition-all ease-linear ${isActive ? 'w-full duration-7000' : 'w-0 duration-0'
-                        }`}
+                      className={`h-0.5 bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.6)] rounded-full transition-all ease-linear ${
+                        isActive ? 'w-full duration-[7000ms]' : 'w-0 duration-0'
+                      }`}
                     />
                   </div>
 
-
                   <div className="flex items-center justify-between sm:justify-start sm:gap-4">
-                    <span className={`font-mono text-xs tracking-wider transition-colors duration-300 ${isActive ? 'text-amber-400 font-bold' : 'text-slate-600 group-hover:text-slate-400'
-                      }`}>
+                    <span className={`font-mono text-xs tracking-wider transition-colors duration-300 ${isActive ? 'text-amber-400 font-bold' : 'text-slate-600 group-hover:text-slate-400'}`}>
                       {slide.id}
                     </span>
-                    <span className={`text-[10px] sm:text-xs tracking-[0.2em] uppercase font-mono font-medium transition-colors duration-300 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-slate-300'
-                      }`}>
+                    <span className={`text-[10px] sm:text-xs tracking-[0.2em] uppercase font-mono font-semibold transition-colors duration-300 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-slate-300'}`}>
                       {slide.tagline.split(' ')[0]}
-                    </span>
-                    <span className={`hidden sm:inline font-mono text-[10px] text-slate-700 transition-colors ${isActive ? 'text-slate-500' : 'group-hover:text-slate-600'
-                      }`}>
-                    // {slide.tagline.split(' ')[1] || 'EXECUTION'}
                     </span>
                   </div>
                 </div>
@@ -287,84 +260,103 @@ const Home = () => {
           </div>
         </div>
       </div>
-      <section className="py-20 px-6 bg-[#0B0F17]">
+
+      <section className="py-24 px-6 bg-[#0B0F17]">
         <div className="max-w-7xl mx-auto">
-
-          <h2 className="text-3xl font-light mb-10">
+          <motion.h2 
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            className="text-3xl font-light mb-10 text-slate-100 tracking-tight"
+          >
             Legal Expertise Areas
-          </h2>
+          </motion.h2>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <motion.div 
+            variants={scrollContainerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
             {categories.map((item, i) => {
               const Icon = item.icon;
-
               return (
-                <div
+                <motion.div
                   key={i}
-                  className="p-6 border border-slate-800 bg-white/5 hover:bg-white/10 transition group"
+                  variants={scrollItemVariants}
+                  whileHover={{ scale: 1.03, borderColor: "rgba(251, 191, 36, 0.4)", backgroundColor: "rgba(255,255,255,0.07)" }}
+                  whileTap={{ scale: 0.98 }}
+                  className="p-6 border border-slate-800 bg-white/5 cursor-pointer transition-colors duration-300 group"
                 >
-                  <Icon className="text-amber-400 text-xl" />
-
-                  <h3 className="mt-4 text-lg font-medium">
-                    {item.title}
-                  </h3>
-
-                  <p className="text-slate-400 text-sm mt-2">
-                    {item.desc}
-                  </p>
-
-                  <div className="h-0.5 w-0 group-hover:w-full bg-amber-400 transition-all mt-4" />
-                </div>
+                  <Icon className="text-amber-400 text-xl transition-transform duration-300 group-hover:scale-110" />
+                  <h3 className="mt-4 text-lg font-medium text-slate-200">{item.title}</h3>
+                  <p className="text-slate-400 text-sm mt-2 font-light">{item.desc}</p>
+                  <div className="h-0.5 w-0 group-hover:w-full bg-amber-400 transition-all duration-300 mt-4" />
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         </div>
       </section>
+
       <section className="w-full relative py-24 px-6 bg-[#070A10] text-white overflow-hidden">
-
         <div className="max-w-7xl mx-auto text-center relative z-10">
-
-
-          <span className="px-5 py-1 text-[11px] tracking-[0.3em] uppercase border border-amber-400/30 text-amber-300 rounded-full">
+          <motion.span 
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className="px-5 py-1 text-[11px] tracking-[0.3em] uppercase border border-amber-400/30 text-amber-300 rounded-full font-mono"
+          >
             Trusted Legal Excellence
-          </span>
+          </motion.span>
 
-   
-          <h2 className="mt-6 text-5xl font-light tracking-tight">
-            Why Clients Choose
-            <span className="text-amber-400 font-normal">Lexvizo</span>
-          </h2>
+          <motion.h2 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className="mt-6 text-5xl font-light tracking-tight"
+          >
+            Why Clients Choose <span className="text-amber-400 font-normal">Lexvizo</span>
+          </motion.h2>
 
-          <p className="mt-5 text-slate-400 max-w-2xl mx-auto text-lg leading-relaxed">
-            Precision-driven legal solutions crafted for individuals and businesses
-            who demand results, clarity, and institutional-level trust.
-          </p>
+          <motion.p 
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+            className="mt-5 text-slate-400 max-w-2xl mx-auto text-lg leading-relaxed font-light"
+          >
+            Precision-driven legal solutions crafted for individuals and businesses who demand results, clarity, and institutional-level trust.
+          </motion.p>
 
- 
-          <div className="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <motion.div 
+            variants={scrollContainerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            className="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+          >
             {features.map((item, index) => (
-              <div
+              <motion.div
                 key={index}
-                className="group relative p-6 bg-white/5 backdrop-blur-xl border border-white/10 hover:border-amber-400/40 transition-all duration-300 hover:-translate-y-2"
+                variants={scrollItemVariants}
+                whileHover={{ y: -10, borderColor: "rgba(251, 191, 36, 0.5)" }}
+                className="group relative p-6 bg-white/5 backdrop-blur-xl border border-white/10 transition-colors duration-300 cursor-pointer"
               >
-                <div className="absolute inset-0 bg-amber-400/0 group-hover:bg-amber-400/5 transition rounded-2xl" />
-
-                <div className="relative">
-                  <div className="text-3xl">{item.icon}</div>
-
-                  <h3 className="mt-4 text-lg font-medium text-white">
-                    {item.title}
-                  </h3>
-                  <p className="mt-2 text-sm text-slate-400 leading-relaxed">
-                    {item.desc}
-                  </p>
+                <div className="absolute inset-0 bg-amber-400/0 group-hover:bg-amber-400/5 transition-colors duration-300" />
+                <div className="relative z-10">
+                  <div className="text-3xl transition-transform duration-300 group-hover:scale-115 inline-block">{item.icon}</div>
+                  <h3 className="mt-4 text-lg font-medium text-white group-hover:text-amber-400 transition-colors">{item.title}</h3>
+                  <p className="mt-2 text-sm text-slate-400 leading-relaxed font-light">{item.desc}</p>
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
-    </div>
+    </motion.div>
   );
 };
 
