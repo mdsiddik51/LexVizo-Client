@@ -1,0 +1,29 @@
+import { betterAuth } from "better-auth";
+import { MongoClient } from "mongodb";
+import { mongodbAdapter } from "better-auth/adapters/mongodb";
+
+const client = new MongoClient(process.env.MONGO_DB_URI);
+const db = client.db(process.env.DB_CU);
+
+export const auth = betterAuth({
+    user: {
+        additionalFields: {
+            role: {
+                type: "string",
+                required: true,
+            },
+        },
+    },
+    emailAndPassword: {
+        enabled: true,
+    },
+    socialProviders: {
+        google: {
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SEC,
+        }
+    },
+    database: mongodbAdapter(db, {
+        client
+    }),
+});

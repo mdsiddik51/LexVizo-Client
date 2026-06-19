@@ -18,7 +18,7 @@ const Home = () => {
     {
       id: "01",
       tagline: "CORPORATE ARCHITECTURE",
-      title: "Shaping Tomorrow’s",
+      title: "Shaping Tomorrow's",
       subtitle: "Enterprise Law.",
       description: "We provide elite counsel for high-stakes mergers, global regulatory compliance, and cross-border corporate governance.",
       methodology: "Rigorous application of data-driven analytics combined with elite transactional craftsmanship.",
