@@ -1,144 +1,161 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button, Link, Avatar, SearchField } from "@heroui/react";
 import { ArrowRightFromSquare } from "@gravity-ui/icons";
 import { Dropdown, Label } from "@heroui/react";
 import { signOut, useSession } from "@/lib/auth-client";
+import { GetUserImage } from "@/lib/actions/api/images";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { data, ispanding } = useSession();
+  const [profileImgUrl, setProfileImgUrl] = useState("");
+  const { data } = useSession() || { data: null };
 
   const user = data?.user;
 
+  useEffect(() => {
+    const fetchNavbarAvatar = async () => {
+      const targetId =  user?.id;
+      if (!targetId) return;
+      try {
+        const response = await GetUserImage(targetId);
+        setProfileImgUrl(response.imageUrl)
+      } catch (error) {
+        console.error("Failed fetching navbar avatar data profile:", error);
+      }
+    };
+
+    fetchNavbarAvatar();
+  });
+
+
+  const getInitials = (name) => {
+    if (!name) return "??";
+    const parts = name.trim().split(" ");
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  const initials = getInitials(user?.name);
+
   return (
-    <div className="pt-3 w-11/12 mx-auto pb-2">
-      <nav className="px-4  ">
-        <header className="flex h-16 items-center justify-between px-1 md:px-6">
-          <div className="flex items-center gap-1 md:gap-4">
+    <div className="w-full bg-[#050811] border-b border-[#131B2E]">
+      <nav className="w-11/12 mx-auto max-w-7xl">
+        <header className="flex h-20 items-center justify-between px-2 md:px-4">
+          
+     
+          <div className="flex items-center gap-2 md:gap-4">
             <button
-              className="md:hidden"
+              className="md:hidden text-gray-400 hover:text-white transition-colors"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               aria-label="Toggle menu"
             >
-              <span className="sr-only">Menu</span>
-              <svg
-                className="h-6 w-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {isMenuOpen ? (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 ) : (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 )}
               </svg>
             </button>
-            <div className="flex items-center  gap-2">
-              <img src="/images/logo.png" alt="LexVizo" className="w-10 h-10" />
-              <h1 className="text-xl hidden md:block  md:text-2xl font-black bg-linear-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent tracking-wider">
+            <Link href="/" className="flex items-center gap-2.5 group">
+              <img src="/images/logo.png" alt="LexVizo" className="w-9 h-9 brightness-110" />
+              <h1 className="text-xl md:text-2xl font-serif font-medium tracking-wider text-[#FCBA80] group-hover:text-[#E2A76F] transition-colors">
                 LexVizo
               </h1>
-            </div>
+            </Link>
           </div>
 
-          <div className="hidden md:block">
-            <SearchField name="search">
-              <SearchField.Group>
-                <SearchField.SearchIcon />
-                <SearchField.Input placeholder="Search..." />
-                <SearchField.ClearButton />
+ 
+          <div className="hidden md:block w-72">
+            <SearchField name="search" className="w-full">
+              <SearchField.Group className="bg-[#0A0F1D] border border-[#131B2E] focus-within:border-[#FCBA80]/40 transition-all rounded-none h-9 px-3">
+                <SearchField.SearchIcon className="text-gray-500 size-4" />
+                <SearchField.Input 
+                  placeholder="Search..." 
+                  className="text-xs text-gray-300 font-light placeholder-gray-600 focus:outline-none"
+                />
+                <SearchField.ClearButton className="text-gray-500" />
               </SearchField.Group>
             </SearchField>
           </div>
 
-          <div className="flex justify-between gap-4">
-            <ul className="hidden text-white gap-4 md:flex">
+
+          <div className="hidden md:flex items-center">
+            <ul className="flex items-center gap-8 text-xs uppercase font-mono tracking-widest text-gray-300">
               <li>
-                <Link href="/">Home</Link>
+                <Link href="/" className="text-gray-300 hover:text-[#FCBA80] transition-colors">Home</Link>
               </li>
               <li>
-                <Link href="/browseloyers">Browse Lawyers</Link>
+                <Link href="/browseloyers" className="text-gray-300 hover:text-[#FCBA80] transition-colors">Browse Lawyers</Link>
               </li>
               <li>
-                <Link href="/dashboard">Dashboard</Link>
+                <Link href="/dashboard" className="text-gray-300 hover:text-[#FCBA80] transition-colors">Dashboard</Link>
               </li>
             </ul>
           </div>
 
-          <div>
+     
+          <div className="flex items-center gap-4">
             {user ? (
               <Dropdown>
-                <Dropdown.Trigger className="rounded-full">
-                  <Avatar>
-                    <Avatar.Image alt={user.name} />
-                    <Avatar.Fallback delayMs={600}>
-                      {user.name.slice(0, 2)}
-                    </Avatar.Fallback>
-                  </Avatar>
+                <Dropdown.Trigger className="cursor-pointer">
+                  <div className="w-9 h-9 border border-[#FCBA80]/40 bg-[#131B2E] overflow-hidden select-none flex items-center justify-center">
+                    {profileImgUrl ? (
+                      <img src={profileImgUrl} alt={user.name} className="w-full h-full object-cover object-top" />
+                    ) : (
+                      <span className="text-xs font-mono font-bold text-[#FCBA80]">{initials}</span>
+                    )}
+                  </div>
                 </Dropdown.Trigger>
-                <Dropdown.Popover>
-                  <div className="px-3 pt-3 pb-1">
-                    <div className="flex items-center gap-2">
-                      <Avatar size="sm">
-                        <Avatar.Image alt={user.name} src={user.name} />
-                        <Avatar.Fallback delayMs={600}>
-                          {user.name.slice(0, 2)}
-                        </Avatar.Fallback>
-                      </Avatar>
-                      <div className="flex flex-col gap-0">
-                        <p className="text-sm leading-5 font-medium">
-                          {user.name}
-                        </p>
-                        <p className="text-xs leading-none text-muted">
-                          {user.email}
-                        </p>
+                <Dropdown.Popover className="bg-[#0E1526] border border-[#131B2E] text-white rounded-none shadow-2xl p-0">
+                  <div className="px-4 py-3.5 border-b border-[#131B2E] bg-[#0A0F1D]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 border border-[#131B2E] bg-[#131B2E] flex items-center justify-center shrink-0">
+                        {profileImgUrl ? (
+                          <img src={profileImgUrl} alt={user.name} className="w-full h-full object-cover object-top" />
+                        ) : (
+                          <span className="text-[10px] font-mono font-bold text-[#FCBA80]">{initials}</span>
+                        )}
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <p className="text-xs font-mono tracking-wide text-white truncate">{user.name}</p>
+                        <p className="text-[10px] font-mono text-[#637599] truncate mt-0.5">{user.email}</p>
                       </div>
                     </div>
                   </div>
-                  <Dropdown.Menu>
-                    <Dropdown.Item id="profile" textValue="Profile">
-                      <Label>Profile</Label>
+                  <Dropdown.Menu className="p-1">
+                    <Dropdown.Item id="profile" textValue="Profile" className="hover:bg-[#131B2E] rounded-none px-3 py-2 text-xs font-mono text-gray-300 transition-colors">
+                      <Label className="cursor-pointer">Profile</Label>
                     </Dropdown.Item>
                     <Dropdown.Item
                       id="logout"
                       textValue="Logout"
                       variant="danger"
+                      className="hover:bg-red-950/40 rounded-none px-3 py-2 text-xs font-mono text-red-400 transition-colors"
                     >
-                      <div onClick={() => signOut()} className="flex w-full items-center justify-between gap-2">
-                        <Label>Log Out</Label>
-                        <ArrowRightFromSquare className="size-3.5 text-danger" />
+                      <div onClick={() => signOut()} className="flex w-full items-center justify-between gap-2 cursor-pointer">
+                        <Label className="cursor-pointer text-red-400">Log Out</Label>
+                        <ArrowRightFromSquare className="size-3.5 text-red-400" />
                       </div>
                     </Dropdown.Item>
                   </Dropdown.Menu>
                 </Dropdown.Popover>
               </Dropdown>
             ) : (
-              <div className="flex gap-4">
-                <Link href="/auth/login">
+              <div className="flex gap-3">
+                <Link href="/auth/login" className="no-underline">
                   <Button
-                    onClick={() => signOut()}
-                    className="bg-linear-to-r from-amber-400 to-orange-500 text-white font-semibold px-6 py-3 rounded-sm  shadow-sm hover:shadow-sm transition-all duration-300 hover:scale-105 "
+                    className="bg-transparent border border-[#FCBA80]/40 text-[#FCBA80] hover:bg-[#FCBA80] hover:text-black text-xs uppercase font-mono font-bold tracking-wider px-5 h-9 rounded-none transition-all duration-200"
                   >
-                    login
+                    Login
                   </Button>
                 </Link>
-                <Link href="/auth/signup">
+                <Link href="/auth/signup" className="no-underline">
                   <Button
-                    variant="tertiary"
-                    className="
-                    bg-linear-to-r from-amber-400 to-orange-500 text-white font-semibold px-6 py-3 rounded-sm shadow-sm hover:shadow-sm transition-all duration-300 hover:scale-105 "
+                    className="bg-[#FCBA80] text-black hover:bg-[#E2A76F] text-xs uppercase font-mono font-bold tracking-wider px-5 h-9 rounded-none transition-all duration-200 shadow-lg shadow-orange-950/20"
                   >
                     Register
                   </Button>
@@ -148,26 +165,26 @@ const Navbar = () => {
           </div>
         </header>
 
+
         {isMenuOpen && (
-          <div className="border-t border-separator md:hidden">
-            <ul className="flex flex-col gap-2 p-4">
-              <li>
-                <SearchField name="search">
-                  <SearchField.Group>
-                    <SearchField.SearchIcon />
-                    <SearchField.Input placeholder="Search..." />
-                    <SearchField.ClearButton />
+          <div className="border-t border-[#131B2E] md:hidden bg-[#050811] animate-fade-in">
+            <ul className="flex flex-col gap-4 p-4 text-xs font-mono uppercase tracking-wider">
+              <li className="pb-2 border-b border-[#131B2E]">
+                <SearchField name="search" className="w-full">
+                  <SearchField.Group className="bg-[#0A0F1D] border border-[#131B2E] rounded-none h-9 px-3">
+                    <SearchField.SearchIcon className="text-gray-500 size-4" />
+                    <SearchField.Input placeholder="Search..." className="text-xs text-gray-300" />
                   </SearchField.Group>
                 </SearchField>
               </li>
               <li>
-                <Link href="/">Home</Link>
+                <Link href="/" className="text-gray-300 hover:text-[#FCBA80] transition-colors block py-1">Home</Link>
               </li>
               <li>
-                <Link href="/allappointment"> All Appointment</Link>
+                <Link href="/allappointment" className="text-gray-300 hover:text-[#FCBA80] transition-colors block py-1">All Appointment</Link>
               </li>
               <li>
-                <Link href="/dashboard">Dashboard</Link>
+                <Link href="/dashboard" className="text-gray-300 hover:text-[#FCBA80] transition-colors block py-1">Dashboard</Link>
               </li>
             </ul>
           </div>

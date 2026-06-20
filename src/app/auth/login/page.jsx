@@ -42,7 +42,7 @@ const Login = () => {
         return;
       }
 
-      toast.success("Welcome to Qylentra 🎉");
+      toast.success("Welcome to LexVizo 🎉");
       setTimeout(() => {
         window.location.href = "/";
       }, 1000);
