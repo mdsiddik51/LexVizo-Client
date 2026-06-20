@@ -12,6 +12,7 @@ const Navbar = () => {
   const { data } = useSession() || { data: null };
 
   const user = data?.user;
+  console.log(user)
 
   useEffect(() => {
     const fetchNavbarAvatar = async () => {
@@ -92,7 +93,7 @@ const Navbar = () => {
                 <Link href="/browseloyers" className="text-gray-300 hover:text-[#FCBA80] transition-colors">Browse Lawyers</Link>
               </li>
               <li>
-                <Link href="/dashboard" className="text-gray-300 hover:text-[#FCBA80] transition-colors">Dashboard</Link>
+                <Link href={`/dashboard/${user?.role}`} className="text-gray-300 hover:text-[#FCBA80] transition-colors">Dashboard</Link>
               </li>
             </ul>
           </div>
