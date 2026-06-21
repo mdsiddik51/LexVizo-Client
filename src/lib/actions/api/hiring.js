@@ -1,0 +1,76 @@
+'use server';
+
+const BaseUrl = process.env.NEXT_URI;
+// src\lib\actions\api\hiring.js
+export const createHiringRequestAction = async (payload) => {
+    try {
+        const response = await fetch(`${BaseUrl}/api/hiring`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`Server Pipeline Fault (${response.status}): ${errorData.message || "No contextual details provided"}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        // This will now pass down the actual network error (e.g., "fetch failed", "Network Error")
+        console.error("Critical execution fault logged in action layer:", error);
+        throw new Error(error.message || "Failed to initialize hiring request.");
+    }
+};
+
+
+export const updateRequestStatusAction = async (requestId, decision) => {
+    try {
+        // decision can be "accepted" or "rejected"
+        const response = await fetch(`${BaseUrl}/api/hiring/${requestId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: decision }),
+        });
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        throw new Error("Failed to update system pipeline routing.");
+    }
+};
+
+export const completeHiringPaymentAction = async (requestId, paymentDetails) => {
+    try {
+        const response = await fetch(`${BaseUrl}/api/hiring/${requestId}/payment`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "paid", paymentDetails }),
+        });
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        throw new Error("Failed to log payment validation confirmation.");
+    }
+};
+// Add this to the bottom of src/lib/actions/api/hiring.js
+
+export const getPendingRequestsAction = async (lawyerId) => {
+    try {
+        if (!lawyerId) throw new Error("Lawyer identification id required.");
+
+        const response = await fetch(`${BaseUrl}/api/hiring?lawyerId=${lawyerId}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            next: { revalidate: 0 } // Bypasses cache to show fresh submissions immediately
+        });
+
+        if (!response.ok) {
+            throw new Error(`Data fetch failed status code: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error("Error in getPendingRequestsAction:", error);
+        return [];
+    }
+};

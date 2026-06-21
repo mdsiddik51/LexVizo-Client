@@ -19,7 +19,7 @@ const Navbar = () => {
     const fetchNavbarAvatar = async () => {
       const targetId = user?.id || user?._id;
       if (!targetId) {
-        setProfileImgUrl(""); t
+        setProfileImgUrl(""); 
         return;
       }
       
@@ -111,7 +111,7 @@ const Navbar = () => {
               </li>
               <li>
                 <Link 
-                  href={user?.role ? `/dashboard/${user.role}` : "/dashboard"} 
+                  href={user?.role ? `/dashboard/${user.role} ` : "/auth/login"} 
                   className="text-gray-300 hover:text-[#FCBA80] transition-colors"
                 >
                   Dashboard

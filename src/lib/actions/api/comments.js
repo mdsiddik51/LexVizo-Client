@@ -34,21 +34,22 @@ export const postCommentAction = async ({ author, role, rating, text, lawyerId, 
 
 export const fetchCommentsAction = async (lawyerId) => {
   try {
-    const response = await fetch(`${BaseUrl}/api/comments?lawyerId=${lawyerId}`, {
+    const response = await fetch(`${BaseUrl}/api/comments/${lawyerId}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      cache: "no-store", // Ensures fresh data on every profile visit
+      headers: { "Content-Type": "application/json" },
     });
 
     if (!response.ok) {
-      throw new Error("Server responded with an error protocol status.");
+      // Extract the error message sent by your Express backend
+      const errorData = await response.json().catch(() => ({}));
+      const serverMessage = errorData.message || errorData.error || "Unknown Server Error";
+      
+      throw new Error(`Server Error (${response.status}): ${serverMessage}`);
     }
 
     return await response.json();
   } catch (error) {
-    console.error("Failed to fetch evaluation matrix data:", error);
+    console.error("Fetch failure in action layer:", error.message);
     throw error;
   }
 };

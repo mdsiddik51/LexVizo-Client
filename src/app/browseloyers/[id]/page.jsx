@@ -10,13 +10,15 @@ import {
   X,
   ShieldAlert,
   ArrowUpRight,
-  Briefcase
+  Briefcase,
+  CheckCircle2
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { fetchLawyersList } from "@/lib/actions/lawyer";
 import { GetUserImage } from "@/lib/actions/api/images";
 import { useRouter, useParams } from "next/navigation";
 import { fetchServiceData } from "@/lib/actions/api/service";
+import { createHiringRequestAction } from "@/lib/actions/api/hiring";
 import CommentSection from "@/app/components/comments/comment";
 import { useSession } from "@/lib/auth-client";
 
@@ -24,9 +26,12 @@ const LawyerDetailsPage = () => {
   const router = useRouter();
   const { id } = useParams();
 
-  
   const userSession = useSession();
   const userRole = "client";
+
+  const currentUserId = userSession?.data?.user?.id;
+  const currentUserName = userSession?.data?.user?.name;
+  const currentUserEmail = userSession?.data?.user?.email;
 
   const [lawyer, setLawyer] = useState(null);
   const [lawyerServices, setLawyerServices] = useState([]);
@@ -63,10 +68,17 @@ const LawyerDetailsPage = () => {
             }
           }
         } catch (err) {
-          console.error("Ancillary data retrieval fault:", err);
+          console.error(err);
         }
 
-        setLawyerServices(servicesData || []);
+        const fallbackServices = servicesData || [];
+        setLawyerServices(fallbackServices);
+        
+        // Auto-select the first package as default if available
+        if (fallbackServices.length > 0) {
+          setSelectedService(fallbackServices[0]);
+        }
+
         setLawyer({
           ...foundLawyer,
           profileImg: resolvedImg,
@@ -90,24 +102,56 @@ const LawyerDetailsPage = () => {
   }, [id]);
 
   const openRetainerModal = (servicePackage = null) => {
-    if (!userSession) {
-      toast.error("Authentication required.");
+    if (!userSession?.data?.user) {
+      toast.error("Authentication required to interact with system profiles.");
       return;
     }
-    setSelectedService(servicePackage);
+
+    // If an explicit package is provided, update selection; otherwise, keep current selection or first fallback
+    if (servicePackage) {
+      setSelectedService(servicePackage);
+    } else if (!selectedService && lawyerServices.length > 0) {
+      setSelectedService(lawyerServices[0]);
+    }
+    
     setHireModalOpen(true);
   };
 
   const handleHireRequest = async (e) => {
     e.preventDefault();
+    if (!currentUserId) {
+      toast.error("Session missing. Please authenticate.");
+      return;
+    }
+
     setIsSubmittingHire(true);
-    setTimeout(() => {
-      setIsSubmittingHire(false);
-      setHireModalOpen(false);
+
+    const payload = {
+      clientId: currentUserId,
+      clientName: currentUserName || "NoName",
+      clientEmail: currentUserEmail || "",
+      lawyerId: lawyer._id,
+      lawyerUserId: lawyer.userId,
+      caseType: selectedService ? selectedService.title : lawyer.specialization || "General Legal Counsel",
+      urgency: selectedService ? "STANDARD" : "HIGH",
+      serviceId: selectedService?._id || null,
+      pricingDetails: selectedService 
+        ? { type: "package", amount: selectedService.price }
+        : { type: "hourly", amount: lawyer.hourlyFee },
+      status: "pending"
+    };
+
+    try {
+      await createHiringRequestAction(payload);
       const allocationType = selectedService ? `the "${selectedService.title}" package` : "a flat standard retainer";
       toast.success(`Retainer request submitted securely for ${allocationType} to ${lawyer?.name}`);
-      setSelectedService(null);
-    }, 1500);
+      setHireModalOpen(false);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to transmit hiring pipeline request payload data structures.");
+    } finally {
+      setIsSubmittingHire(false);
+    }
   };
 
   if (isLoading) {
@@ -185,7 +229,7 @@ const LawyerDetailsPage = () => {
 
           <div className="pt-2 space-y-8">
             <button onClick={() => openRetainerModal(null)} className="group flex items-center justify-between border border-[#FCBA80] bg-[#FCBA80] text-black px-6 py-4 w-full md:w-72 font-mono text-xs uppercase font-bold tracking-widest hover:bg-transparent hover:text-[#FCBA80] transition-all duration-300">
-              <span>Hire Counsel Retainer</span>
+              <span>{selectedService ? "Retain Selected Package" : "Hire Counsel Retainer"}</span>
               <ArrowUpRight size={16} />
             </button>
 
@@ -201,26 +245,52 @@ const LawyerDetailsPage = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {lawyerServices.map((service, index) => (
-                    <div key={service._id || index} className="border border-[#131B2E] bg-[#0A0F1D]/40 p-4 space-y-4 flex flex-col justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-[#FCBA80]">
-                          <Briefcase size={12} />
-                          <h4 className="text-xs font-mono uppercase tracking-wide font-bold">{service.title || "Consultation Brief"}</h4>
+                  {lawyerServices.map((service, index) => {
+                    const isSelected = selectedService?._id === service._id;
+                    return (
+                      <div 
+                        key={service._id || index} 
+                        onClick={() => setSelectedService(service)}
+                        className={`border cursor-pointer transition-all duration-200 bg-[#0A0F1D]/40 p-4 space-y-4 flex flex-col justify-between hover:border-[#FCBA80]/40 ${
+                          isSelected ? "border-[#FCBA80] bg-[#FCBA80]/5 shadow-[0_0_15px_rgba(252,186,128,0.05)]" : "border-[#131B2E]"
+                        }`}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-[#FCBA80]">
+                            <div className="flex items-center gap-2">
+                              <Briefcase size={12} />
+                              <h4 className="text-xs font-mono uppercase tracking-wide font-bold">{service.title || "Consultation Brief"}</h4>
+                            </div>
+                            {isSelected && (
+                              <span className="text-[8px] font-mono tracking-tight bg-[#FCBA80] text-black px-1 py-0.5 font-bold uppercase">
+                                [ Active Mandate ]
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] font-serif text-gray-400 font-light leading-relaxed line-clamp-3">{service.description || "No description listed."}</p>
                         </div>
-                        <p className="text-[11px] font-serif text-gray-400 font-light leading-relaxed line-clamp-3">{service.description || "No description listed."}</p>
-                      </div>
-                      <div className="space-y-2 pt-2 border-t border-[#131B2E]/60">
-                        <div className="flex items-center justify-between font-mono text-[11px]">
-                          <span className="text-gray-500 uppercase text-[9px]">Valuation</span>
-                          <span className="text-gray-200 font-bold">${service.price} {lawyer.currency || "BDT"}</span>
+                        <div className="space-y-2 pt-2 border-t border-[#131B2E]/60">
+                          <div className="flex items-center justify-between font-mono text-[11px]">
+                            <span className="text-gray-500 uppercase text-[9px]">Valuation</span>
+                            <span className="text-gray-200 font-bold">${service.price} {lawyer.currency || "BDT"}</span>
+                          </div>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation(); // Stop parent div click activation triggers
+                              openRetainerModal(service);
+                            }} 
+                            className={`w-full font-mono text-[9px] py-1.5 uppercase font-bold tracking-wider transition-all duration-200 border ${
+                              isSelected 
+                                ? "bg-[#FCBA80] text-black border-[#FCBA80] hover:bg-[#E2A76F]" 
+                                : "border-[#131B2E] bg-[#050811] text-gray-300 hover:bg-[#FCBA80] hover:text-black hover:border-[#FCBA80]"
+                            }`}
+                          >
+                            {isSelected ? "Initialize Retainer" : "Select Package"}
+                          </button>
                         </div>
-                        <button onClick={() => openRetainerModal(service)} className="w-full border border-[#131B2E] bg-[#050811] hover:bg-[#FCBA80] hover:text-black hover:border-[#FCBA80] text-gray-300 font-mono text-[9px] py-1.5 uppercase font-bold tracking-wider transition-all duration-200">
-                          Select Package
-                        </button>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -228,15 +298,13 @@ const LawyerDetailsPage = () => {
         </div>
       </div>
 
-      {/* Linked Subcomponent */}
       <CommentSection userRole={userRole} userSession={userSession} />
 
-      {/* Retainer Dynamic Modal */}
       {hireModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" onClick={() => { setHireModalOpen(false); setSelectedService(null); }} />
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setHireModalOpen(false)} />
           <div className="relative w-full max-w-md border border-[#131B2E] bg-[#0A0F1D] p-6 text-white space-y-6">
-            <button onClick={() => { setHireModalOpen(false); setSelectedService(null); }} className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors">
+            <button onClick={() => setHireModalOpen(false)} className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors">
               <X size={16} />
             </button>
             <div className="space-y-1 border-b border-[#131B2E] pb-3">
@@ -256,7 +324,7 @@ const LawyerDetailsPage = () => {
               )}
             </div>
             <div className="grid grid-cols-2 gap-3 pt-2">
-              <button onClick={() => { setHireModalOpen(false); setSelectedService(null); }} className="border border-[#131B2E] py-2 text-xs font-mono uppercase text-gray-400 hover:text-white transition-colors">Abort Protocol</button>
+              <button onClick={() => setHireModalOpen(false)} className="border border-[#131B2E] py-2 text-xs font-mono uppercase text-gray-400 hover:text-white transition-colors">Abort Protocol</button>
               <button onClick={handleHireRequest} disabled={isSubmittingHire} className="bg-[#FCBA80] text-black py-2 text-xs font-mono font-bold uppercase tracking-wide hover:bg-[#E2A76F] transition-all flex items-center justify-center gap-2">
                 {isSubmittingHire ? <div className="w-3 h-3 border border-black border-t-transparent animate-spin rounded-full" /> : "Confirm & Disclose"}
               </button>
