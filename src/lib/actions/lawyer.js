@@ -24,24 +24,23 @@ export const LawyerProfile = async (NewLawyer) => {
     }
 };
 
+export const fetchLawyersList = async () => {
+  try {
+    const response = await fetch(`${BaseUrl}/api/collectawyer`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
-export const LawyerServices = async (Services) => {
-    try {
-        const response = await fetch(`${BaseUrl}/api/services`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(Services)
-        });
-
-        if (!response.ok) {
-            throw new Error(`Server responded with status: ${response.status}`);
-        }
-        return await response.json();
-
-    } catch (error) {
-        console.error("Error inside LawyerProfile server action:", error);
-        throw error;
+    if (!response.ok) {
+      throw new Error(`Server responded with status: ${response.status}`);
     }
+
+    const data = await response.json();
+    return data; // Returns the array of lawyers
+  } catch (error) {
+    console.error("Error executing live lawyer collection fetch:", error);
+    throw error;
+  }
 };

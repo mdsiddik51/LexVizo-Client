@@ -3,15 +3,18 @@ import { revalidatePath } from "next/cache";
 
 const BaseUrl = process.env.NEXT_URI;
 
-// Accept an object destructuring { userId, imageUrl }
 export const ProfileImage = async ({ userId, imageUrl }) => {
+    // 1. Quick defensive check for missing arguments
+    if (!userId || !imageUrl) {
+        throw new Error("Missing required fields: userId and imageUrl are required.");
+    }
+
     try {
         const response = await fetch(`${BaseUrl}/api/images`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            // Stringify the object properly
             body: JSON.stringify({ userId, imageUrl })
         });
 
@@ -20,13 +23,20 @@ export const ProfileImage = async ({ userId, imageUrl }) => {
         }
 
         const data = await response.json();
+        
+        // 2. Next.js cache revalidation
         revalidatePath('/');
+        
         return data;
     } catch (error) {
+        // Logging the error for server-side debugging
         console.error("Error inside ProfileImage server action:", error);
-        throw error;
+        
+        // Re-throwing so the calling client component can catch it and show a UI toast/error message
+        throw error; 
     }
 };
+
 export const GetUserImage = async (userId) => {
     try {
         const response = await fetch(`${BaseUrl}/api/images/${userId}`, {

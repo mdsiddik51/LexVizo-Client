@@ -172,7 +172,7 @@ const ManageServices = () => {
     setIsDeleteModalOpen(false); // Instantly close modal UI
 
     try {
-      await deleteServiceData(targetDeleteId, user.id);
+      await deleteServiceData(targetDeleteId);
       setMockServices(mockServices.filter((item) => item._id !== targetDeleteId));
       toast.success("Service deleted.", { id: loadingToast });
     } catch (error) {

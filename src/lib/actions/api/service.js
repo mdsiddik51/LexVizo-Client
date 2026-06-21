@@ -65,14 +65,14 @@ export const updateServiceData = async (serviceId, updatedFields) => {
 }
 
 // 3. DELETE SERVICE ACTION
-export const deleteServiceData = async (serviceId, userId) => {
+export const deleteServiceData = async (serviceId) => {
     try {
         const response = await fetch(`${BaseUrl}/api/service/${serviceId}`, {
             method: "DELETE",
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({ userId }),
+            body: JSON.stringify({ serviceId }),
         });
 
         if (!response.ok) {
@@ -95,6 +95,8 @@ export const deleteServiceData = async (serviceId, userId) => {
         throw error;
     }
 }
+
+
 export const fetchServiceData = async (userId) => {
     try {
         if (!userId) throw new Error("Missing targeted user query context.");
