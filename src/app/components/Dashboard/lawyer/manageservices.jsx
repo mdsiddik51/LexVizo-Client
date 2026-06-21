@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, ShieldCheck, X, DollarSign, AlertTriangle } from "lucide-react";
+import { Plus, Edit2, Trash2, ShieldCheck, X, DollarSign, AlertTriangle, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useSession } from "@/lib/auth-client";
 
@@ -16,7 +16,7 @@ const ManageServices = () => {
   const user = data?.user;
 
   const [activeCurrency, setActiveCurrency] = useState("USD");
-  const [viewMode, setViewMode] = useState("all");
+  const [viewMode, setViewMode] = useState("all"); // Modes: "all", "add", "edit"
   const [selectedService, setSelectedService] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -158,7 +158,6 @@ const ManageServices = () => {
     }
   };
 
-  // Triggers the safety validation overlay context
   const requestDeleteConfirmation = (id) => {
     setTargetDeleteId(id);
     setIsDeleteModalOpen(true);
@@ -169,7 +168,7 @@ const ManageServices = () => {
     if (!user?.id || !targetDeleteId) return;
 
     const loadingToast = toast.loading("Removing catalog entry...");
-    setIsDeleteModalOpen(false); // Instantly close modal UI
+    setIsDeleteModalOpen(false);
 
     try {
       await deleteServiceData(targetDeleteId);
@@ -186,8 +185,9 @@ const ManageServices = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 border-b border-[#131B2E] pb-4">
+    <div className="w-full space-y-6 text-white bg-transparent min-h-[400px] flex flex-col justify-start">
+      {/* Top Header Panel Section stays consistent regardless of internal mode configurations */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 border-b border-[#131B2E] pb-4 w-full">
         <div>
           <h2 className="text-2xl font-serif text-[#FCBA80] tracking-wide">
             Manage Services
@@ -231,154 +231,164 @@ const ManageServices = () => {
         </div>
       </div>
 
-      {viewMode !== "all" && (
-        <div className="border border-[#131B2E] bg-[#090D1A]/40 p-6 max-w-2xl relative">
-          <button
-            onClick={closeForm}
-            className="absolute top-4 right-4 text-gray-500 hover:text-white"
-          >
-            <X size={16} />
-          </button>
-
-          <h3 className="text-sm font-mono text-[#FCBA80] uppercase tracking-wider mb-4">
-            {viewMode === "add"
-              ? "Create New Catalog Entry"
-              : "Modify Service Parameter"}
-          </h3>
-
-          <form
-            onSubmit={viewMode === "add" ? handleCreate : handleUpdate}
-            className="space-y-4"
-          >
-            <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-2 space-y-1.5">
-                <label className="text-[9px] font-mono uppercase tracking-widest text-gray-400 block">
-                  Service Name *
-                </label>
-                <input
-                  type="text"
-                  name="title"
-                  value={serviceForm.title}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="e.g. Legal Consultation"
-                  className="w-full bg-[#0A0F1D] border border-[#131B2E] px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-[#FCBA80]/40"
-                />
-              </div>
-              <div className="col-span-1 space-y-1.5">
-                <label className="text-[9px] font-mono uppercase tracking-widest text-gray-400 block">
-                  Price ({activeCurrency}) *
-                </label>
-                <input
-                  type="number"
-                  name="price"
-                  value={serviceForm.price}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="0.00"
-                  className="w-full bg-[#0A0F1D] border border-[#131B2E] px-3 py-2 text-xs text-gray-200 font-mono focus:outline-none focus:border-[#FCBA80]/40"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-mono uppercase tracking-widest text-gray-400 block">
-                Description & Bounds
-              </label>
-              <textarea
-                name="description"
-                rows={3}
-                value={serviceForm.description}
-                onChange={handleInputChange}
-                placeholder="Specify bounds or limitations of the custom package..."
-                className="w-full bg-[#0A0F1D] border border-[#131B2E] px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-[#FCBA80]/40 resize-none"
-              />
-            </div>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={closeForm}
-                className="border border-zinc-800 bg-zinc-900/40 px-4 py-1.5 text-xs font-mono text-gray-400 hover:text-white"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="bg-[#FCBA80] text-black font-mono font-bold text-xs tracking-wider px-5 py-1.5 flex items-center gap-1.5"
-              >
-                <ShieldCheck size={14} /> Commit Changes
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {viewMode === "all" && (
-        <div className="border border-[#131B2E] bg-[#090D1A]/20">
-          {isLoading ? (
-            <div className="p-8 text-center text-xs font-mono tracking-wide text-[#FCBA80] animate-pulse">
+      {/* Main Structural Core View wrapper avoiding element height destruction */}
+      <div className="w-full relative dynamic-viewport-container transition-all duration-200">
+        {isLoading ? (
+          <div className="w-full border border-[#131B2E] bg-[#090D1A]/20 p-12 flex flex-col items-center justify-center gap-3 text-center rounded-sm">
+            <Loader2 size={24} className="text-[#FCBA80] animate-spin" />
+            <span className="text-xs font-mono tracking-wider text-[#FCBA80]">
               Synchronizing remote data resources...
-            </div>
-          ) : mockServices.length === 0 ? (
-            <div className="p-8 text-center text-xs italic text-gray-500">
-              No registered catalog parameters active. Click "Add Service" above to initialize setup.
-            </div>
-          ) : (
-            <div className="divide-y divide-[#131B2E]">
-              {mockServices.map((service) => (
-                <div
-                  key={service._id}
-                  className="p-4 flex items-center justify-between hover:bg-[#090D1A]/60 transition-all"
+            </span>
+          </div>
+        ) : (
+          <>
+            {/* ADD / EDIT DATA SUB-PANEL MODAL INLINE CONFIGURATION */}
+            {viewMode !== "all" && (
+              <div className="w-full max-w-2xl border border-[#131B2E] bg-[#090D1A]/40 p-6 relative animate-in fade-in-50 duration-200">
+                <button
+                  onClick={closeForm}
+                  className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"
                 >
-                  <div className="space-y-1 max-w-xl">
-                    <div className="flex items-center gap-3">
-                      <h4 className="text-xs font-mono font-bold tracking-wide text-gray-200 uppercase">
-                        {service.title}
-                      </h4>
-                      <span className="text-[10px] font-mono bg-[#0E1526] border border-[#131B2E] text-[#FCBA80] px-2 py-0.5 uppercase tracking-wider">
-                        {currencyOptions.find((c) => c.code === activeCurrency)?.symbol || ""}
-                        {service.price} {activeCurrency} Flat Rate
-                      </span>
+                  <X size={16} />
+                </button>
+
+                <h3 className="text-sm font-mono text-[#FCBA80] uppercase tracking-wider mb-4">
+                  {viewMode === "add"
+                    ? "Create New Catalog Entry"
+                    : "Modify Service Parameter"}
+                </h3>
+
+                <form
+                  onSubmit={viewMode === "add" ? handleCreate : handleUpdate}
+                  className="space-y-4"
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="sm:col-span-2 space-y-1.5">
+                      <label className="text-[9px] font-mono uppercase tracking-widest text-gray-400 block">
+                        Service Name *
+                      </label>
+                      <input
+                        type="text"
+                        name="title"
+                        value={serviceForm.title}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="e.g. Legal Consultation"
+                        className="w-full bg-[#0A0F1D] border border-[#131B2E] px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-[#FCBA80]/40"
+                      />
                     </div>
-                    <p className="text-[11px] text-gray-400 font-light leading-relaxed">
-                      {service.description || "No explicit framework scope added."}
-                    </p>
+                    <div className="sm:col-span-1 space-y-1.5">
+                      <label className="text-[9px] font-mono uppercase tracking-widest text-gray-400 block">
+                        Price ({activeCurrency}) *
+                      </label>
+                      <input
+                        type="number"
+                        name="price"
+                        value={serviceForm.price}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="0.00"
+                        className="w-full bg-[#0A0F1D] border border-[#131B2E] px-3 py-2 text-xs text-gray-200 font-mono focus:outline-none focus:border-[#FCBA80]/40"
+                      />
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-mono uppercase tracking-widest text-gray-400 block">
+                      Description & Bounds
+                    </label>
+                    <textarea
+                      name="description"
+                      rows={3}
+                      value={serviceForm.description}
+                      onChange={handleInputChange}
+                      placeholder="Specify bounds or limitations of the custom package..."
+                      className="w-full bg-[#0A0F1D] border border-[#131B2E] px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-[#FCBA80]/40 resize-none"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-2">
                     <button
-                      onClick={() => openEditMode(service)}
-                      className="p-2 border border-zinc-800 bg-zinc-900/40 text-gray-400 hover:text-[#FCBA80] hover:border-[#FCBA80]/40 transition-all"
-                      title="Edit Service"
+                      type="button"
+                      onClick={closeForm}
+                      className="border border-zinc-800 bg-zinc-900/40 px-4 py-1.5 text-xs font-mono text-gray-400 hover:text-white transition-colors"
                     >
-                      <Edit2 size={13} />
+                      Cancel
                     </button>
                     <button
-                      onClick={() => requestDeleteConfirmation(service._id)}
-                      className="p-2 border border-zinc-800 bg-zinc-900/40 text-gray-400 hover:text-red-400 hover:border-red-900/40 transition-all"
-                      title="Delete Service"
+                      type="submit"
+                      className="bg-[#FCBA80] text-black font-mono font-bold text-xs tracking-wider px-5 py-1.5 flex items-center gap-1.5 hover:bg-[#E2A76F] transition-colors"
                     >
-                      <Trash2 size={13} />
+                      <ShieldCheck size={14} /> Commit Changes
                     </button>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                </form>
+              </div>
+            )}
+
+            {/* CATALOG LIST VIEW MODAL ROUTINE BOX CONTAINER */}
+            {viewMode === "all" && (
+              <div className="w-full border border-[#131B2E] bg-[#090D1A]/20 animate-in fade-in-50 duration-200">
+                {mockServices.length === 0 ? (
+                  <div className="p-12 text-center text-xs italic text-gray-500 font-mono">
+                    // No registered catalog parameters active. Click "Add Service" above to initialize setup.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-[#131B2E]">
+                    {mockServices.map((service) => (
+                      <div
+                        key={service._id}
+                        className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#090D1A]/60 transition-all"
+                      >
+                        <div className="space-y-1 max-w-xl">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <h4 className="text-xs font-mono font-bold tracking-wide text-gray-200 uppercase">
+                              {service.title}
+                            </h4>
+                            <span className="text-[10px] font-mono bg-[#0E1526] border border-[#131B2E] text-[#FCBA80] px-2 py-0.5 uppercase tracking-wider">
+                              {currencyOptions.find((c) => c.code === activeCurrency)?.symbol || ""}
+                              {service.price} {activeCurrency} Flat Rate
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-gray-400 font-light leading-relaxed">
+                            {service.description || "No explicit framework scope added."}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2 self-end sm:self-center">
+                          <button
+                            onClick={() => openEditMode(service)}
+                            className="p-2 border border-zinc-800 bg-zinc-900/40 text-gray-400 hover:text-[#FCBA80] hover:border-[#FCBA80]/40 transition-all"
+                            title="Edit Service"
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button
+                            onClick={() => requestDeleteConfirmation(service._id)}
+                            className="p-2 border border-zinc-800 bg-zinc-900/40 text-gray-400 hover:text-red-400 hover:border-red-900/40 transition-all"
+                            title="Delete Service"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       {/* SECURE DELETION CONFIRMATION OVERLAY MODAL */}
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop Blur effect */}
           <div 
             className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
             onClick={() => setIsDeleteModalOpen(false)}
           />
           
-          {/* Main Content Modal Container */}
           <div className="relative w-full max-w-md border border-[#131B2E] bg-[#0A0F1D] p-6 shadow-2xl text-white animate-in fade-in zoom-in-95 duration-150">
             <button 
               onClick={() => setIsDeleteModalOpen(false)}

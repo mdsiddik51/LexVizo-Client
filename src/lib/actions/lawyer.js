@@ -38,7 +38,10 @@ export const fetchLawyersList = async () => {
     }
 
     const data = await response.json();
-    return data; // Returns the array of lawyers
+    
+    // Safety check: always return an array so your UI layout map operations don't break
+    return Array.isArray(data) ? data : []; 
+    
   } catch (error) {
     console.error("Error executing live lawyer collection fetch:", error);
     throw error;

@@ -11,97 +11,100 @@ import {
 
 const Footer = () => {
   return (
-    <footer className="relative bg-[#070A12] text-white pt-24 pb-10 px-6 overflow-hidden">
-
-      <div className="absolute inset-0 opacity-20">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(212,175,55,0.15),transparent_40%)]"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_60%,rgba(212,175,55,0.10),transparent_45%)]"></div>
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:60px_60px]"></div>
+    <footer className="relative bg-[#050811] text-gray-300 pt-20 pb-8 px-6 border-t border-[#131B2E] overflow-hidden">
+      
+      
+      <div className="absolute inset-0 opacity-10 pointer-events-none">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(19,27,46,0.3)_1px,transparent_1px),linear-gradient(to_bottom,rgba(19,27,46,0.3)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
       </div>
 
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-14 relative z-10">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 relative z-10">
 
-        <div className="space-y-6">
-          <h2 className="text-3xl font-serif tracking-wide">
-            <span className="text-[#D4AF37]">Lex</span>vizo
+       
+        <div className="space-y-5">
+          <h2 className="text-xl font-serif tracking-wider uppercase text-gray-100">
+            <span className="text-[#FCBA80]">Lex</span>vizo
           </h2>
 
-          <p className="text-sm text-white/70 leading-relaxed">
-            A modern legal hiring platform connecting top-tier lawyers and firms
-            with precision, trust, and global reach.
+          <p className="text-xs text-gray-400 font-light leading-relaxed max-w-xs">
+            A modern decentralized legal hiring network connecting premium advocacy talent and global firms with total precision.
           </p>
 
-          <div className="flex gap-3 pt-2">
+        
+          <div className="flex gap-2 pt-1">
             {[FaFacebookF, FaInstagram, FaTwitter, FaLinkedinIn, FaYoutube].map(
               (Icon, i) => (
                 <a
                   key={i}
                   href="#"
-                  className="h-10 w-10 rounded-md border border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black flex items-center justify-center transition-all duration-300"
+                  className="h-8 w-8 border border-[#131B2E] bg-[#0A0F1D] text-gray-400 hover:border-[#FCBA80]/60 hover:text-[#FCBA80] flex items-center justify-center transition-all duration-200"
                 >
-                  <Icon className="text-sm" />
+                  <Icon className="text-xs" />
                 </a>
               )
             )}
           </div>
         </div>
 
+       
         <div>
-          <h3 className="text-sm tracking-[0.2em] text-[#D4AF37] mb-6">
-            QUICK LINKS
+          <h3 className="text-[10px] font-mono uppercase tracking-[0.25em] text-[#FCBA80] mb-5">
+            // INDEX CHANNELS
           </h3>
 
-          <ul className="space-y-4 text-white/70 text-sm">
+          <ul className="space-y-3 font-mono text-[11px] text-gray-500">
             <li>
-              <a href="/about" className="hover:text-[#D4AF37] transition">
-                About
+              <a href="/about" className="hover:text-gray-300 transition-colors flex items-center gap-1">
+                <span>&gt;</span> About Infrastructure
               </a>
             </li>
             <li>
-              <a href="/contact" className="hover:text-[#D4AF37] transition">
-                Contact
+              <a href="/contact" className="hover:text-gray-300 transition-colors flex items-center gap-1">
+                <span>&gt;</span> Direct Contact
               </a>
             </li>
             <li>
-              <a href="/privacy" className="hover:text-[#D4AF37] transition">
-                Privacy Policy
+              <a href="/privacy" className="hover:text-gray-300 transition-colors flex items-center gap-1">
+                <span>&gt;</span> Privacy Protocol
               </a>
             </li>
           </ul>
         </div>
 
-        <div className="lg:col-span-2 space-y-5">
-          <h3 className="text-sm tracking-[0.2em] text-[#D4AF37]">
-            NEWSLETTER SIGNUP
+       
+        <div className="lg:col-span-2 space-y-4">
+          <h3 className="text-[10px] font-mono uppercase tracking-[0.25em] text-[#FCBA80]">
+            // SYSTEM UPDATES
           </h3>
 
-          <p className="text-sm text-white/70">
-            Subscribe to receive legal hiring updates, premium job alerts, and industry insights.
+          <p className="text-xs text-gray-400 font-light max-w-md">
+            Subscribe to index telemetry logs, premium job alert distributions, and platform scaling reports.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 max-w-md pt-1">
             <input
               type="email"
-              placeholder="Enter your email"
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-md text-white placeholder-white/40 focus:outline-none focus:border-[#D4AF37]"
+              placeholder="operator@domain.com"
+              className="w-full bg-[#0A0F1D] border border-[#131B2E] px-3 py-2 text-xs font-mono text-gray-200 focus:outline-none focus:border-[#FCBA80]/40 placeholder-gray-700"
             />
 
-            <button className="px-6 py-3 bg-[#D4AF37] text-black font-semibold rounded-md hover:bg-yellow-500 transition">
+            <button className="bg-[#FCBA80] text-black hover:bg-[#E2A76F] px-5 py-2 text-xs font-mono tracking-wider font-bold uppercase transition-all duration-150">
               Subscribe
             </button>
           </div>
 
-          <p className="text-xs text-white/40">
-            No spam. Only relevant opportunities.
+          <p className="text-[10px] font-mono text-gray-600">
+            Status: Active Pipeline // No Spam. Only Core Dispatches.
           </p>
         </div>
       </div>
 
-      <div className="border-t border-white/10 mt-16 pt-6 text-center text-xs text-white/50 relative z-10">
-        <p>© {new Date().getFullYear()} Lexvizo. All rights reserved.</p>
-        <p className="mt-2 tracking-widest">
-          ELITE LEGAL NETWORK • GLOBAL HIRING PLATFORM
-        </p>
+     
+      <div className="border-t border-[#131B2E] mt-16 pt-6 flex flex-col sm:flex-row justify-between items-center text-[10px] font-mono text-gray-500 relative z-10 gap-3">
+        <p>© {new Date().getFullYear()} LEXVIZO. ALL RIGHTS RESERVED.</p>
+        <div className="tracking-widest text-[9px] text-gray-600 border border-zinc-900/60 px-2 py-0.5 bg-zinc-950/40">
+          ELITE LEGAL NETWORK // GLOBAL INDEX TERMINAL
+        </div>
       </div>
     </footer>
   );

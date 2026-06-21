@@ -12,7 +12,8 @@ import {
   ArrowUpRight,
   Briefcase,
   CheckCircle2,
-  Star // Added for visual tracking of rating aggregates
+  Star,
+  EyeOff // Added to represent busy profile configurations
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { fetchLawyersList } from "@/lib/actions/lawyer";
@@ -49,7 +50,6 @@ const LawyerDetailsPage = () => {
     try {
       const comments = await fetchCommentsAction(lawyerid);
       if (comments && comments.length > 0) {
-        // Safe mapping to fallback integers to prevent data parsing corruption
         const validRatings = comments.map(c => Number(c.rating || c.stars || 0)).filter(r => !isNaN(r) && r > 0);
         if (validRatings.length > 0) {
           const totalSum = validRatings.reduce((acc, curr) => acc + curr, 0);
@@ -79,7 +79,6 @@ const LawyerDetailsPage = () => {
           return;
         }
 
-        // Concurrently run rating acquisition to prevent component blockages
         if (foundLawyer._id) {
           getTherating(foundLawyer._id);
         }
@@ -132,6 +131,12 @@ const LawyerDetailsPage = () => {
   }, [id]);
 
   const openRetainerModal = (servicePackage = null) => {
+    // Structural guard check protecting workflow integrity if the profile states fully booked
+    if (lawyer?.isBusy) {
+      toast.error("Counsel allocation rejected. This practitioner is currently fully booked.");
+      return;
+    }
+
     if (!userSession?.data?.user) {
       toast.error("Authentication required to interact with system profiles.");
       return;
@@ -148,6 +153,11 @@ const LawyerDetailsPage = () => {
 
   const handleHireRequest = async (e) => {
     e.preventDefault();
+    if (lawyer?.isBusy) {
+      toast.error("Action denied: Profile status is currently set to busy.");
+      return;
+    }
+
     if (!currentUserId) {
       toast.error("Session missing. Please authenticate.");
       return;
@@ -240,7 +250,6 @@ const LawyerDetailsPage = () => {
             <h1 className="text-4xl md:text-5xl font-serif text-gray-100 tracking-wide uppercase leading-none">{lawyer.name}</h1>
           </div>
 
-     
           <div className="border-t border-b border-[#131B2E] py-4 grid grid-cols-3 gap-2 font-mono text-[11px] text-gray-400">
             <div className="flex items-center gap-2">
               <DollarSign size={14} className="text-[#FCBA80]" />
@@ -262,10 +271,24 @@ const LawyerDetailsPage = () => {
           </div>
 
           <div className="pt-2 space-y-8">
-            <button onClick={() => openRetainerModal(null)} className="group flex items-center justify-between border border-[#FCBA80] bg-[#FCBA80] text-black px-6 py-4 w-full md:w-72 font-mono text-xs uppercase font-bold tracking-widest hover:bg-transparent hover:text-[#FCBA80] transition-all duration-300">
-              <span>{selectedService ? "Retain Selected Package" : "Hire Counsel Retainer"}</span>
-              <ArrowUpRight size={16} />
-            </button>
+            {/* Primary Hire Retainer Action Button */}
+            {lawyer.isBusy ? (
+              <button 
+                disabled
+                className="flex items-center justify-between border border-zinc-800 bg-zinc-900 text-zinc-500 px-6 py-4 w-full md:w-72 font-mono text-xs uppercase font-bold tracking-widest cursor-not-allowed opacity-60"
+              >
+                <span>Fully Booked</span>
+                <EyeOff size={16} />
+              </button>
+            ) : (
+              <button 
+                onClick={() => openRetainerModal(null)} 
+                className="group flex items-center justify-between border border-[#FCBA80] bg-[#FCBA80] text-black px-6 py-4 w-full md:w-72 font-mono text-xs uppercase font-bold tracking-widest hover:bg-transparent hover:text-[#FCBA80] transition-all duration-300"
+              >
+                <span>{selectedService ? "Retain Selected Package" : "Hire Counsel Retainer"}</span>
+                <ArrowUpRight size={16} />
+              </button>
+            )}
 
             <div className="border-t border-[#131B2E] pt-6 space-y-4">
               <div>
@@ -284,9 +307,13 @@ const LawyerDetailsPage = () => {
                     return (
                       <div 
                         key={service._id || index} 
-                        onClick={() => setSelectedService(service)}
-                        className={`border cursor-pointer transition-all duration-200 bg-[#0A0F1D]/40 p-4 space-y-4 flex flex-col justify-between hover:border-[#FCBA80]/40 ${
-                          isSelected ? "border-[#FCBA80] bg-[#FCBA80]/5 shadow-[0_0_15px_rgba(252,186,128,0.05)]" : "border-[#131B2E]"
+                        onClick={() => !lawyer.isBusy && setSelectedService(service)}
+                        className={`border transition-all duration-200 bg-[#0A0F1D]/40 p-4 space-y-4 flex flex-col justify-between ${
+                          lawyer.isBusy 
+                            ? "border-[#131B2E] opacity-50 cursor-not-allowed" 
+                            : isSelected 
+                              ? "border-[#FCBA80] bg-[#FCBA80]/5 shadow-[0_0_15px_rgba(252,186,128,0.05)] cursor-pointer hover:border-[#FCBA80]/40" 
+                              : "border-[#131B2E] cursor-pointer hover:border-[#FCBA80]/40"
                         }`}
                       >
                         <div className="space-y-1">
@@ -295,7 +322,7 @@ const LawyerDetailsPage = () => {
                               <Briefcase size={12} />
                               <h4 className="text-xs font-mono uppercase tracking-wide font-bold">{service.title || "Consultation Brief"}</h4>
                             </div>
-                            {isSelected && (
+                            {!lawyer.isBusy && isSelected && (
                               <span className="text-[8px] font-mono tracking-tight bg-[#FCBA80] text-black px-1 py-0.5 font-bold uppercase">
                                 [ Active Mandate ]
                               </span>
@@ -303,23 +330,29 @@ const LawyerDetailsPage = () => {
                           </div>
                           <p className="text-[11px] font-serif text-gray-400 font-light leading-relaxed line-clamp-3">{service.description || "No description listed."}</p>
                         </div>
+                        
                         <div className="space-y-2 pt-2 border-t border-[#131B2E]/60">
                           <div className="flex items-center justify-between font-mono text-[11px]">
                             <span className="text-gray-500 uppercase text-[9px]">Valuation</span>
                             <span className="text-gray-200 font-bold">${service.price} {lawyer.currency || "BDT"}</span>
                           </div>
+                          
+                          {/* Package-specific Selector Buttons */}
                           <button 
+                            disabled={lawyer.isBusy}
                             onClick={(e) => {
                               e.stopPropagation();
                               openRetainerModal(service);
                             }} 
                             className={`w-full font-mono text-[9px] py-1.5 uppercase font-bold tracking-wider transition-all duration-200 border ${
-                              isSelected 
-                                ? "bg-[#FCBA80] text-black border-[#FCBA80] hover:bg-[#E2A76F]" 
-                                : "border-[#131B2E] bg-[#050811] text-gray-300 hover:bg-[#FCBA80] hover:text-black hover:border-[#FCBA80]"
+                              lawyer.isBusy
+                                ? "border-zinc-800 bg-zinc-900 text-zinc-500 cursor-not-allowed"
+                                : isSelected 
+                                  ? "bg-[#FCBA80] text-black border-[#FCBA80] hover:bg-[#E2A76F]" 
+                                  : "border-[#131B2E] bg-[#050811] text-gray-300 hover:bg-[#FCBA80] hover:text-black hover:border-[#FCBA80]"
                             }`}
                           >
-                            {isSelected ? "Initialize Retainer" : "Select Package"}
+                            {lawyer.isBusy ? "Unavailable" : isSelected ? "Initialize Retainer" : "Select Package"}
                           </button>
                         </div>
                       </div>
@@ -359,7 +392,7 @@ const LawyerDetailsPage = () => {
             </div>
             <div className="grid grid-cols-2 gap-3 pt-2">
               <button onClick={() => setHireModalOpen(false)} className="border border-[#131B2E] py-2 text-xs font-mono uppercase text-gray-400 hover:text-white transition-colors">Abort Protocol</button>
-              <button onClick={handleHireRequest} disabled={isSubmittingHire} className="bg-[#FCBA80] text-black py-2 text-xs font-mono font-bold uppercase tracking-wide hover:bg-[#E2A76F] transition-all flex items-center justify-center gap-2">
+              <button onClick={handleHireRequest} disabled={isSubmittingHire || lawyer.isBusy} className="bg-[#FCBA80] text-black py-2 text-xs font-mono font-bold uppercase tracking-wide hover:bg-[#E2A76F] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
                 {isSubmittingHire ? <div className="w-3 h-3 border border-black border-t-transparent animate-spin rounded-full" /> : "Confirm & Disclose"}
               </button>
             </div>

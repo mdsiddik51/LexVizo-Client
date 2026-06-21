@@ -1,18 +1,27 @@
 "use client";
 import React, { useState, useRef } from "react";
-import { ArrowLeft, Upload } from "lucide-react";
+import { ArrowLeft, Upload, Briefcase, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
 import { updateLawyerData } from "@/lib/actions/api/lawyerdata";
 
 const EditLawyerForm = ({ initialData, userId, onCancel }) => {
-  const [editData, setEditData] = useState({ ...initialData });
+  const [editData, setEditData] = useState({ 
+    ...initialData,
+    // Strictly force a strict boolean true/false context fallback
+    isBusy: initialData?.isBusy === true || initialData?.isBusy === "true" ? true : false
+  });
   const [isUpdating, setIsUpdating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setEditData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    
+    setEditData((prev) => ({ 
+      ...prev, 
+      // Force a real boolean evaluation for the toggle input target field
+      [name]: type === "checkbox" ? Boolean(checked) : value 
+    }));
   };
 
   const handleImageReupload = async (e) => {
@@ -69,11 +78,22 @@ const EditLawyerForm = ({ initialData, userId, onCancel }) => {
     const toastId = toast.loading("Saving updates...");
     
     try {
-      const response = await updateLawyerData(activeUserId, editData);
+      // Sanitize exact payload fields before dispatching to the server action
+      const payload = {
+        ...editData,
+        hourlyFee: Number(editData.hourlyFee),
+        isBusy: editData.isBusy === true // Sanitizes status strictly to a clean boolean value
+      };
 
-      if (response?.acknowledged || response?.result?.acknowledged || response?.message) {
+      const response = await updateLawyerData(activeUserId, payload);
+
+      if (response?.acknowledged || response?.result?.acknowledged || response?.message || response?.success) {
         toast.success("Profile updated successfully!", { id: toastId });
         onCancel();
+        
+        if (typeof window !== "undefined") {
+          window.location.reload();
+        }
       } else {
         throw new Error("Update rejected");
       }
@@ -86,7 +106,7 @@ const EditLawyerForm = ({ initialData, userId, onCancel }) => {
   };
 
   return (
-    <form onSubmit={handleUpdateSubmit} className="space-y-6 animate-fade-in">
+    <form onSubmit={handleUpdateSubmit} className="space-y-6 animate-fade-in w-full text-white">
       <div className="flex items-center gap-3">
         <button type="button" onClick={onCancel} className="text-gray-400 hover:text-[#FCBA80] transition-colors">
           <ArrowLeft size={18} />
@@ -101,6 +121,15 @@ const EditLawyerForm = ({ initialData, userId, onCancel }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 border border-[#131B2E] bg-[#090D1A]/40 p-6 space-y-5">
+          
+          {/* Dynamic Availability Header Status Badge */}
+          <div className={`p-3 border text-xs font-mono flex items-center gap-2 transition-all duration-200 ${editData.isBusy ? "bg-red-950/20 border-red-900/40 text-red-400" : "bg-emerald-950/20 border-emerald-900/40 text-emerald-400"}`}>
+            {editData.isBusy ? <EyeOff size={14} /> : <Briefcase size={14} />}
+            <span>
+              Availability: {editData.isBusy ? "BUSY (Hidden from lookup booking channels)" : "AVAILABLE FOR HIRE (Active)"}
+            </span>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="block text-[9px] font-mono uppercase tracking-widest text-gray-400">Full Legal Name *</label>
@@ -182,6 +211,28 @@ const EditLawyerForm = ({ initialData, userId, onCancel }) => {
               onChange={handleChange}
               className="w-full bg-[#0A0F1D] border border-[#131B2E] px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#FCBA80]/40 resize-none"
             />
+          </div>
+
+          {/* --- INTERACTIVE AVAILABILITY TOGGLE SLIDER CONTROL --- */}
+          <div className="p-4 border border-[#131B2E] bg-[#060A14] flex items-center justify-between gap-4">
+            <div className="space-y-0.5">
+              <label className="block text-[10px] font-mono uppercase tracking-widest text-gray-300">
+                Account Status Settings
+              </label>
+              <p className="text-[11px] text-gray-500 max-w-[85%]">
+                Mark yourself busy to temporarily pause client consultation intakes and hide your profile listing from the discovery boards.
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer select-none shrink-0">
+              <input
+                type="checkbox"
+                name="isBusy"
+                checked={!!editData.isBusy}
+                onChange={handleChange}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-gray-400 after:border-zinc-700 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-900/60 peer-checked:after:bg-red-400 border border-zinc-700/60"></div>
+            </label>
           </div>
 
           <div className="pt-2 flex justify-end">
