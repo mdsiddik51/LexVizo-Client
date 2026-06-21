@@ -1,10 +1,61 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Search, SlidersHorizontal, ArrowUpDown, User, ArrowUpRight } from "lucide-react";
+import { Search, SlidersHorizontal, ArrowUpDown, User, ArrowUpRight, Star } from "lucide-react";
 import toast from "react-hot-toast";
 import { fetchLawyersList } from "@/lib/actions/lawyer";
 import { GetUserImage } from "@/lib/actions/api/images";
+import { fetchCommentsAction } from "@/lib/actions/api/comments";
 import { useRouter } from "next/navigation";
+
+const LawyerCardRating = ({ lawyerId }) => {
+  const [rating, setRating] = useState("...");
+
+  useEffect(() => {
+    let isMounted = true;
+    
+    const calculateRating = async () => {
+      if (!lawyerId) {
+        if (isMounted) setRating("N/A");
+        return;
+      }
+      try {
+        const comments = await fetchCommentsAction(lawyerId);
+        if (isMounted) {
+          if (comments && comments.length > 0) {
+            const validRatings = comments
+              .map(c => Number(c.rating || c.stars || 0))
+              .filter(r => !isNaN(r) && r > 0);
+            
+            if (validRatings.length > 0) {
+              const totalSum = validRatings.reduce((acc, curr) => acc + curr, 0);
+              setRating((totalSum / validRatings.length).toFixed(1));
+            } else {
+              setRating("N/A");
+            }
+          } else {
+            setRating("N/A");
+          }
+        }
+      } catch (err) {
+        console.error(`Telemetry error for ${lawyerId}:`, err);
+        if (isMounted) setRating("N/A");
+      }
+    };
+
+    calculateRating();
+    return () => { isMounted = false; };
+  }, [lawyerId]);
+
+  return (
+    <div className="flex items-center gap-1.5 font-mono text-[10px] text-gray-400 mt-4 mb-2">
+      <Star size={11} className="text-[#FCBA80] fill-[#FCBA80]/10 shrink-0" />
+      <span>Rating:</span>
+      <span className="text-gray-200 font-bold">
+        {rating} {rating !== "N/A" && rating !== "..." && "★"}
+      </span>
+    </div>
+  );
+};
 
 const BrowseLawyersPage = () => {
   const router = useRouter();
@@ -30,14 +81,16 @@ const BrowseLawyersPage = () => {
         const resolvedLawyers = await Promise.all(
           rawLawyersList.map(async (lawyer) => {
             let imgUrl = "";
+
             if (lawyer.userId) {
               try {
                 const imgData = await GetUserImage(lawyer.userId);
                 imgUrl = imgData?.imageUrl || "";
               } catch (imgError) {
-                console.error(imgError);
+                console.error("Failed to load user image payload:", imgError);
               }
             }
+
             return {
               ...lawyer,
               profileImg: imgUrl,
@@ -171,23 +224,29 @@ const BrowseLawyersPage = () => {
                   <p className="text-xs text-gray-400 font-light mt-3 line-clamp-3 leading-relaxed">{lawyer.bio}</p>
                 </div>
 
-                <div className="pt-4 border-t border-[#131B2E] mt-4 flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <span className="text-[8px] font-mono uppercase tracking-widest text-gray-500">Hourly Retainer</span>
-                    <span className="text-xs font-mono text-gray-200">{lawyer.hourlyFee} {lawyer.currency || "BDT"}/hr</span>
+                <div>
+                  {/* Safely isolated self-fetching rating component */}
+                  <LawyerCardRating lawyerId={lawyer._id} />
+
+                  <div className="pt-4 border-t border-[#131B2E] flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="text-[8px] font-mono uppercase tracking-widest text-gray-500">Hourly Retainer</span>
+                      <span className="text-xs font-mono text-gray-200">{lawyer.hourlyFee} {lawyer.currency || "BDT"}/hr</span>
+                    </div>
+                    
+                    <button 
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        router.push(`/browseloyers/${lawyer._id}`); 
+                      }}
+                      className="text-[10px] font-mono uppercase font-bold border border-[#131B2E] text-gray-300 bg-[#0A0F1D] px-3 py-1.5 group-hover:border-[#FCBA80] group-hover:text-black group-hover:bg-[#FCBA80] flex items-center gap-1 transition-all duration-300"
+                    >
+                      Details
+                      <ArrowUpRight size={12} className="opacity-60 group-hover:opacity-100" />
+                    </button>
                   </div>
-                  
-                  <button 
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
-                      router.push(`/browseloyers/${lawyer._id}`); 
-                    }}
-                    className="text-[10px] font-mono uppercase font-bold border border-[#131B2E] text-gray-300 bg-[#0A0F1D] px-3 py-1.5 group-hover:border-[#FCBA80] group-hover:text-black group-hover:bg-[#FCBA80] flex items-center gap-1 transition-all duration-300"
-                  >
-                    Details
-                    <ArrowUpRight size={12} className="opacity-60 group-hover:opacity-100" />
-                  </button>
                 </div>
+
               </div>
             ))}
           </div>

@@ -3,12 +3,68 @@ import React, { useTransition, useState, useEffect, useMemo } from "react";
 import { ArrowRight } from "lucide-react";
 import { getPendingRequestsAction, updateRequestStatusAction } from "@/lib/actions/api/hiring";
 import { GetLawyerData } from "@/lib/actions/api/lawyerdata";
+import { GetUserImage } from "@/lib/actions/api/images";
+
+// Sub-component to dynamically handle individual client images safely
+const ClientAvatar = ({ clientUserId, clientName }) => {
+  const [imageUrl, setImageUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchImg = async () => {
+      if (!clientUserId) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const data = await GetUserImage(clientUserId);
+        
+        // FIX: Extracting "imageUrl" field matching your database schema payload format
+        if (data && typeof data === "string") {
+          setImageUrl(data);
+        } else if (data?.imageUrl) {
+          setImageUrl(data.imageUrl);
+        } else if (data?.url) {
+          setImageUrl(data.url);
+        }
+      } catch (err) {
+        console.error("Failed to load image for user:", clientUserId, err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchImg();
+  }, [clientUserId]);
+
+  const initials = clientName ? clientName.split(" ").map((n) => n[0]).join("").toUpperCase() : "??";
+
+  if (loading) {
+    return (
+      <div className="w-8 h-8 bg-[#121A2D] border border-zinc-800 flex items-center justify-center animate-pulse shrink-0" />
+    );
+  }
+
+  return (
+    <div className="w-8 h-8 bg-[#121A2D] text-[#FCBA80] border border-zinc-800 flex items-center justify-center font-mono font-semibold text-xs shrink-0 overflow-hidden rounded-sm">
+      {imageUrl ? (
+        <img 
+          src={imageUrl} 
+          alt={clientName || "Client"} 
+          className="w-full h-full object-cover text-transparent"
+          onError={() => setImageUrl(null)} // fallback protection if image URL breaks
+        />
+      ) : (
+        initials
+      )}
+    </div>
+  );
+};
 
 const HiringHistory = ({ initialRequests = [], userid }) => {
   const [requests, setRequests] = useState(initialRequests);
   const [isPending, startTransition] = useTransition();
 
-  // 1. Fetch requests dynamically when userid changes
+  // Fetch requests dynamically when userid changes
   useEffect(() => {
     const fetchLawyerRequests = async () => {
       try {
@@ -27,7 +83,7 @@ const HiringHistory = ({ initialRequests = [], userid }) => {
     }
   }, [userid]);
 
-  // 2. Compute dynamic stats from live state data
+  // Compute dynamic stats from live state data
   const analytics = useMemo(() => {
     const total = requests.length;
     const pendingCount = requests.filter((r) => r.status === "pending" || r.status === undefined).length;
@@ -132,9 +188,7 @@ const HiringHistory = ({ initialRequests = [], userid }) => {
               <div key={row._id} className="p-4 space-y-3 bg-[#0A0F1D]/30">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-[#121A2D] text-[#FCBA80] border border-zinc-800 flex items-center justify-center font-mono font-semibold text-xs shrink-0">
-                      {row.clientName ? row.clientName.split(" ").map((n) => n[0]).join("") : "??"}
-                    </div>
+                    <ClientAvatar clientUserId={row.clientId || row.userId} clientName={row.clientName} />
                     <div className="min-w-0">
                       <div className="text-white font-medium text-xs truncate">{row.clientName || "Unknown Client"}</div>
                       <div className="text-[10px] text-gray-500 font-mono truncate">{row.clientEmail}</div>
@@ -223,9 +277,7 @@ const HiringHistory = ({ initialRequests = [], userid }) => {
                 requests.map((row) => (
                   <tr key={row._id} className="hover:bg-[#0A0F1D]/60 transition-colors">
                     <td className="py-4 px-4 flex items-center gap-3">
-                      <div className="w-8 h-8 bg-[#121A2D] text-[#FCBA80] border border-zinc-800 flex items-center justify-center font-mono font-semibold text-xs shrink-0">
-                        {row.clientName ? row.clientName.split(" ").map((n) => n[0]).join("") : "??"}
-                      </div>
+                      <ClientAvatar clientUserId={row.clientId || row.userId} clientName={row.clientName} />
                       <div className="min-w-0">
                         <div className="text-white font-medium truncate max-w-[160px]">{row.clientName || "Unknown Client"}</div>
                         <div className="text-[10px] text-gray-500 font-mono mt-0.5 truncate max-w-[160px]">

@@ -11,7 +11,8 @@ import {
   ShieldAlert,
   ArrowUpRight,
   Briefcase,
-  CheckCircle2
+  CheckCircle2,
+  Star // Added for visual tracking of rating aggregates
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { fetchLawyersList } from "@/lib/actions/lawyer";
@@ -21,6 +22,7 @@ import { fetchServiceData } from "@/lib/actions/api/service";
 import { createHiringRequestAction } from "@/lib/actions/api/hiring";
 import CommentSection from "@/app/components/comments/comment";
 import { useSession } from "@/lib/auth-client";
+import { fetchCommentsAction } from "@/lib/actions/api/comments";
 
 const LawyerDetailsPage = () => {
   const router = useRouter();
@@ -36,10 +38,34 @@ const LawyerDetailsPage = () => {
   const [lawyer, setLawyer] = useState(null);
   const [lawyerServices, setLawyerServices] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [averageRating, setAverageRating] = useState("0.0");
 
   const [hireModalOpen, setHireModalOpen] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [isSubmittingHire, setIsSubmittingHire] = useState(false);
+
+  // Computes the average rating dynamically based on comment telemetry arrays
+  const getTherating = async (lawyerid) => {
+    try {
+      const comments = await fetchCommentsAction(lawyerid);
+      if (comments && comments.length > 0) {
+        // Safe mapping to fallback integers to prevent data parsing corruption
+        const validRatings = comments.map(c => Number(c.rating || c.stars || 0)).filter(r => !isNaN(r) && r > 0);
+        if (validRatings.length > 0) {
+          const totalSum = validRatings.reduce((acc, curr) => acc + curr, 0);
+          const avg = (totalSum / validRatings.length).toFixed(1);
+          setAverageRating(avg);
+        } else {
+          setAverageRating("N/A");
+        }
+      } else {
+        setAverageRating("N/A");
+      }
+    } catch (err) {
+      console.error("Failed to compute lawyer rating telemetry matrix:", err);
+      setAverageRating("ERR");
+    }
+  };
 
   useEffect(() => {
     const getLawyerDetailsAndServices = async () => {
@@ -51,6 +77,11 @@ const LawyerDetailsPage = () => {
         if (!foundLawyer) {
           setLawyer(null);
           return;
+        }
+
+        // Concurrently run rating acquisition to prevent component blockages
+        if (foundLawyer._id) {
+          getTherating(foundLawyer._id);
         }
 
         let resolvedImg = "";
@@ -74,7 +105,6 @@ const LawyerDetailsPage = () => {
         const fallbackServices = servicesData || [];
         setLawyerServices(fallbackServices);
         
-        // Auto-select the first package as default if available
         if (fallbackServices.length > 0) {
           setSelectedService(fallbackServices[0]);
         }
@@ -107,7 +137,6 @@ const LawyerDetailsPage = () => {
       return;
     }
 
-    // If an explicit package is provided, update selection; otherwise, keep current selection or first fallback
     if (servicePackage) {
       setSelectedService(servicePackage);
     } else if (!selectedService && lawyerServices.length > 0) {
@@ -211,12 +240,17 @@ const LawyerDetailsPage = () => {
             <h1 className="text-4xl md:text-5xl font-serif text-gray-100 tracking-wide uppercase leading-none">{lawyer.name}</h1>
           </div>
 
-          <div className="border-t border-b border-[#131B2E] py-4 grid grid-cols-2 gap-4 font-mono text-[11px] text-gray-400">
+     
+          <div className="border-t border-b border-[#131B2E] py-4 grid grid-cols-3 gap-2 font-mono text-[11px] text-gray-400">
             <div className="flex items-center gap-2">
               <DollarSign size={14} className="text-[#FCBA80]" />
               <span>Rate: <strong className="text-white">${lawyer.hourlyFee} {lawyer.currency || "BDT"}/hr</strong></span>
             </div>
             <div className="flex items-center gap-2">
+              <Star size={14} className="text-[#FCBA80] fill-[#FCBA80]/10" />
+              <span>Rating: <strong className="text-white">{averageRating} {averageRating !== "N/A" && averageRating !== "ERR" && "★"}</strong></span>
+            </div>
+            <div className="flex items-center gap-2 justify-end md:justify-start">
               <Calendar size={14} className="text-[#FCBA80]" />
               <span>Joined: <strong className="text-white">{lawyer.dateJoined}</strong></span>
             </div>
@@ -276,7 +310,7 @@ const LawyerDetailsPage = () => {
                           </div>
                           <button 
                             onClick={(e) => {
-                              e.stopPropagation(); // Stop parent div click activation triggers
+                              e.stopPropagation();
                               openRetainerModal(service);
                             }} 
                             className={`w-full font-mono text-[9px] py-1.5 uppercase font-bold tracking-wider transition-all duration-200 border ${
