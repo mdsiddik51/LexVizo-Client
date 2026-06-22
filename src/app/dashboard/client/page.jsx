@@ -18,12 +18,13 @@ import ManageProfileTab from "@/app/components/Dashboard/client/ManageProfileTab
 import CommentsManagementTab from "@/app/components/Dashboard/client/CommentsManagementTab";
 import HiringHistoryTab from "@/app/components/Dashboard/client/HiringHistoryTab";
 
-// Updated Comment Actions
+// Updated Comment & Hiring Actions
 import {
   getUserCommentsAction,
   updateCommentAction,
   deleteCommentAction,
 } from "@/lib/actions/api/comments";
+import { getClientRequestsAction, completeHiringPaymentAction } from "@/lib/actions/api/hiring";
 
 export default function UserDashboard() {
   const [activeTab, setActiveTab] = useState("hiring-history");
@@ -37,39 +38,10 @@ export default function UserDashboard() {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Interactive UI arrays
-  const [hiringHistory, setHiringHistory] = useState([
-    {
-      id: 1,
-      lawyer: "Md Lawyer",
-      email: "jondowd@gamil.com",
-      specialization: "lege",
-      fee: "Package: $234,324",
-      date: "Jun 21, 2026",
-      urgency: "STANDARD",
-      status: "pending",
-    },
-    {
-      id: 2,
-      lawyer: "Md. Harvey Specter",
-      email: "harvey@specterlegal.com",
-      specialization: "Corporate Law",
-      fee: "$500/hr",
-      date: "Jun 20, 2026",
-      urgency: "HIGH",
-      status: "accepted",
-    },
-    {
-      id: 3,
-      lawyer: "Jessica Pearson",
-      email: "jessica@pearson.com",
-      specialization: "Mergers & Acquisitions",
-      fee: "$750/hr",
-      date: "Jun 18, 2026",
-      urgency: "STANDARD",
-      status: "rejected",
-    },
-  ]);
+  // Dynamic hiring history system states
+  const [hiringHistory, setHiringHistory] = useState([]);
+  const [isFetchingHiring, setIsFetchingHiring] = useState(false);
+  const [paymentSuccessId, setPaymentSuccessId] = useState(null);
 
   // Dynamic comments system states
   const [comments, setComments] = useState([]);
@@ -77,12 +49,25 @@ export default function UserDashboard() {
   const [editingComment, setEditingComment] = useState(null);
   const [editText, setEditText] = useState("");
   const [editRating, setEditRating] = useState(5);
-  const [paymentSuccessId, setPaymentSuccessId] = useState(null);
-
   
   const [commentToDelete, setCommentToDelete] = useState(null);
 
-  
+  // Fetch Live Hiring History Pipeline
+  const fetchClientHiringRequests = async () => {
+    if (!sessionUser?.id) return;
+    setIsFetchingHiring(true);
+    try {
+      const data = await getClientRequestsAction(sessionUser.id);
+      setHiringHistory(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error pulling live pipeline database records:", error);
+      toast.error("Failed to load your hiring history registry.");
+    } finally {
+      setIsFetchingHiring(false);
+    }
+  };
+
+  // Dynamic comments system fetcher
   const fetchUserComments = async () => {
     if (!sessionUser?.id) return;
     setIsFetchingComments(true);
@@ -97,10 +82,14 @@ export default function UserDashboard() {
     }
   };
 
- 
+  // Hook into active tab view switches to pull accurate telemetry data
   useEffect(() => {
-    if (sessionUser?.id && activeTab === "comments") {
-      fetchUserComments();
+    if (sessionUser?.id) {
+      if (activeTab === "hiring-history") {
+        fetchClientHiringRequests();
+      } else if (activeTab === "comments") {
+        fetchUserComments();
+      }
     }
   }, [sessionUser?.id, activeTab]);
 
@@ -231,7 +220,6 @@ export default function UserDashboard() {
     }
   };
 
-
   const startEditComment = (comment) => {
     const targetId = comment._id || comment.id;
     setEditingComment(targetId);
@@ -260,7 +248,6 @@ export default function UserDashboard() {
     }
   };
 
-  
   const deleteComment = (commentId, lawyerId) => {
     setCommentToDelete({ id: commentId, lawyerId: lawyerId });
   };
@@ -284,15 +271,33 @@ export default function UserDashboard() {
     }
   };
 
-  const handlePayment = (id) => {
-    setPaymentSuccessId(id);
-    toast.success("Retainer Fee paid successfully!");
-    setTimeout(() => setPaymentSuccessId(null), 4000);
+  // Process Real Database Actions inside the payment handler
+  const handlePayment = async (requestId) => {
+    const toastId = toast.loading("Initializing secure transaction gateway...");
+    try {
+      const mockDetails = {
+        transactionId: `TXN-${Math.random().toString(36).substring(2, 11).toUpperCase()}`,
+        gateway: "Stripe_Node_V3"
+      };
+
+      const updatedRequest = await completeHiringPaymentAction(requestId, mockDetails);
+      
+      if (updatedRequest) {
+        // Mutate local layout parameters immediately to present active changes dynamically
+        setHiringHistory(prev => prev.map(req => (req._id === requestId ? updatedRequest : req)));
+        setPaymentSuccessId(requestId);
+        toast.success("Retainer Fee paid successfully!", { id: toastId });
+        setTimeout(() => setPaymentSuccessId(null), 4000);
+      }
+    } catch (error) {
+      console.error("Payment pipeline error:", error);
+      toast.error(error.message || "Failed to log payment ledger settlement parameters.", { id: toastId });
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#04080f] text-slate-100 font-sans flex flex-col lg:flex-row relative overflow-x-hidden">
-     
+      
       <div className="lg:hidden h-16 bg-[#050a12] border-b border-[#111927] flex items-center justify-between px-4 sticky top-0 z-50 w-full">
         <h1 className="text-xl font-serif text-[#e0a96d] tracking-wide font-medium">
           LexVizo
@@ -321,6 +326,7 @@ export default function UserDashboard() {
           {activeTab === "hiring-history" && (
             <HiringHistoryTab
               hiringHistory={hiringHistory}
+              isLoading={isFetchingHiring}
               paymentSuccessId={paymentSuccessId}
               handlePayment={handlePayment}
             />
@@ -357,11 +363,9 @@ export default function UserDashboard() {
         </div>
       </main>
 
-     
       {commentToDelete && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs transition-opacity duration-200">
           <div className="w-full max-w-xl bg-[#090f1c] border border-[#162235] p-6 shadow-2xl relative">
-            
             <button
               onClick={() => setCommentToDelete(null)}
               className="absolute top-4 right-4 text-slate-500 hover:text-slate-300 transition-colors"
@@ -369,7 +373,6 @@ export default function UserDashboard() {
               <X size={16} />
             </button>
 
-          
             <div className="flex items-start gap-4 pr-4">
               <div className="p-2 border border-rose-950 bg-rose-950/20 text-rose-500 shrink-0 mt-0.5">
                 <AlertTriangle size={16} />
@@ -386,7 +389,6 @@ export default function UserDashboard() {
               </div>
             </div>
 
-           
             <div className="flex justify-end gap-3 mt-6 font-mono text-[10px] uppercase tracking-wider">
               <button
                 onClick={() => setCommentToDelete(null)}

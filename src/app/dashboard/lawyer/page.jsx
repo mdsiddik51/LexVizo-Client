@@ -11,11 +11,13 @@ import {
   Briefcase,
   TrendingUp,
   Clock,
-  AlertCircle,
   ArrowRight,
   Star,
   Menu,
-  X
+  X,
+  DollarSign,
+  CheckCircle2,
+  XCircle
 } from "lucide-react";
 
 import HiringHistory from "@/app/components/Dashboard/lawyer/hirehistory";
@@ -24,7 +26,7 @@ import ManageServices from "@/app/components/Dashboard/lawyer/manageservices";
 import { GetUserImage } from "@/lib/actions/api/images";
 import { useSession } from "@/lib/auth-client";
 import { GetLawyerData } from "@/lib/actions/api/lawyerdata";
-import { getPendingRequestsAction } from "@/lib/actions/api/hiring";
+import { getLawyerRequestsAction } from "@/lib/actions/api/hiring";
 import { fetchCommentsAction } from "@/lib/actions/api/comments";
 
 const LawyerDashboard = () => {
@@ -37,7 +39,7 @@ const LawyerDashboard = () => {
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Core Data Fetch Hook
+  // Core Data Fetch Hook - Hits updated backend to persist data upon reload
   useEffect(() => {
     const fetchDashboardMetadata = async () => {
       const targetId = session?.user?._id || session?.user?.id;
@@ -58,12 +60,12 @@ const LawyerDashboard = () => {
 
         const lawyerProfile = await GetLawyerData(targetId);
         if (lawyerProfile?._id) {
-          const [freshRequests, freshComments] = await Promise.all([
-            getPendingRequestsAction(lawyerProfile._id),
+          const [allRequests, freshComments] = await Promise.all([
+            getLawyerRequestsAction(lawyerProfile._id),
             fetchCommentsAction(lawyerProfile._id)
           ]);
           
-          setRequests(freshRequests || []);
+          setRequests(allRequests || []);
           setCommentsData(freshComments || []);
         }
       } catch (error) {
@@ -77,16 +79,16 @@ const LawyerDashboard = () => {
     setImageError(false);
   }, [session]);
 
-  // Compute Aggregated Analytics Matrices
+ 
   const dashboardStats = useMemo(() => {
     const total = requests.length;
-    const pending = requests.filter(r => r.status === "pending" || !r.status).length;
-    const highUrgency = requests.filter(r => r.urgency === "HIGH" && (r.status === "pending" || !r.status)).length;
+   
+    const paidClientsList = requests.filter(r => r.status === "paid");
+    const unpaidClientsList = requests.filter(r => r.status !== "paid");
+    const highUrgency = unpaidClientsList.filter(r => r.urgency === "HIGH").length;
     
-    // Total pending pipeline valuation capital pool
-    const totalRevenue = requests
-      .filter(r => r.status === "pending" || !r.status)
-      .reduce((sum, r) => sum + (r.pricingDetails?.amount || 0), 0);
+    const totalEarning = paidClientsList.reduce((sum, r) => sum + (r.pricingDetails?.amount || 0), 0);
+    const totalUnpaidRevenue = unpaidClientsList.reduce((sum, r) => sum + (r.pricingDetails?.amount || 0), 0);
 
     const totalComments = commentsData.length;
     const averageRating = totalComments > 0 
@@ -100,11 +102,22 @@ const LawyerDashboard = () => {
       return commentDate >= startOfToday;
     }).length;
 
-    return { total, pending, highUrgency, totalRevenue, averageRating, totalComments, commentsToday };
+    return { 
+      total, 
+      pending: unpaidClientsList.length, 
+      highUrgency, 
+      totalEarning, 
+      totalUnpaidRevenue,
+      paidClientsList,
+      unpaidClientsList,
+      averageRating, 
+      totalComments, 
+      commentsToday 
+    };
   }, [requests, commentsData]);
 
-  const userName = session?.user?.name || "Alexander Reed";
-  const userRole = session?.user?.role || "Senior Partner";
+  const userName = session?.user?.name || "Practitioner";
+  const userRole = session?.user?.role || "Counsel Partner";
   const userid = session?.user?.id;
 
   const getInitials = (name) => {
@@ -146,7 +159,7 @@ const LawyerDashboard = () => {
   return (
     <div className="min-h-screen bg-[#050811] text-white flex flex-col md:flex-row font-sans selection:bg-[#E2A76F]/30">
       
-      {/* Mobile Top Header Bar */}
+    
       <div className="md:hidden h-16 border-b border-[#131B2E] bg-[#050811] px-4 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-2">
           <h1 className="text-lg font-serif tracking-wider text-[#FCBA80]">LexVizo</h1>
@@ -160,7 +173,7 @@ const LawyerDashboard = () => {
         </button>
       </div>
 
-      {/* Overlapping Mobile Drawer Sidebar */}
+   
       {mobileMenuOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden" onClick={() => setMobileMenuOpen(false)} />
       )}
@@ -202,10 +215,7 @@ const LawyerDashboard = () => {
         </div>
       </aside>
 
-      {/* Main Container Viewport */}
       <div className="flex-1 flex flex-col min-w-0">
-        
-        {/* Desktop Header panel */}
         <header className="hidden md:flex h-16 border-b border-[#131B2E] px-8 items-center justify-between bg-[#050811] sticky top-0 z-30">
           <div className="relative w-80">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
@@ -246,14 +256,13 @@ const LawyerDashboard = () => {
           </div>
         </header>
 
-        {/* Core Layout Main Component Block */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto max-w-7xl w-full mx-auto space-y-6">
           {activeMenu === "dashboard" && (
             <div className="space-y-6 animate-fade-in">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <div className="text-[10px] font-mono tracking-widest text-[#637599] mb-1">
-                    OVERVIEW &gt; CONTROL PANEL
+                    OVERVIEW &gt; SYSTEM DISCLOSURE
                   </div>
                   <h2 className="text-2xl sm:text-3xl font-serif text-white tracking-wide">
                     Welcome Back, {userName.split(" ")[0]}
@@ -274,15 +283,15 @@ const LawyerDashboard = () => {
                 </div>
               </div>
 
-              {/* Dynamic Analytics Aggregations */}
+             
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { title: "Pending Pipeline Value", value: `$${dashboardStats.totalRevenue.toLocaleString()}`, icon: <TrendingUp className="text-[#FCBA80]" size={16} /> },
-                  { title: "Pending Requests", value: String(dashboardStats.pending).padStart(2, "0"), icon: <Clock className="text-amber-400" size={16} />, highlight: dashboardStats.pending > 0 },
-                  { title: "User Satisfaction Star", value: `${dashboardStats.averageRating} / 5.0`, icon: <Star className="text-emerald-400 fill-emerald-500/20" size={16} /> },
-                  { title: "High Urgency Action", value: String(dashboardStats.highUrgency).padStart(2, "0"), icon: <AlertCircle className="text-rose-400" size={16} />, highlight: dashboardStats.highUrgency > 0 },
+                  { title: "Total Earnings", value: `$${dashboardStats.totalEarning.toLocaleString()}`, icon: <DollarSign className="text-emerald-400" size={16} /> },
+                  { title: "Paid Client Count", value: String(dashboardStats.paidClientsList.length).padStart(2, "0"), icon: <CheckCircle2 className="text-emerald-400" size={16} /> },
+                  { title: "Unpaid / Outstanding Billing", value: `$${dashboardStats.totalUnpaidRevenue.toLocaleString()}`, icon: <TrendingUp className="text-amber-400" size={16} /> },
+                  { title: "Unpaid Client Count", value: String(dashboardStats.unpaidClientsList.length).padStart(2, "0"), icon: <Clock className="text-amber-400" size={16} />, highlight: dashboardStats.unpaidClientsList.length > 0 },
                 ].map((metric, i) => (
-                  <div key={i} className={`border border-[#131B2E] bg-[#090D1A]/40 p-5 flex justify-between items-start ${metric.highlight ? "border-rose-500/30" : ""}`}>
+                  <div key={i} className={`border border-[#131B2E] bg-[#090D1A]/40 p-5 flex justify-between items-start ${metric.highlight ? "border-amber-500/30" : ""}`}>
                     <div className="min-w-0">
                       <span className="text-[9px] font-mono uppercase tracking-widest text-gray-400 block truncate">{metric.title}</span>
                       <span className="text-xl sm:text-2xl font-serif text-white mt-2 block truncate">{metric.value}</span>
@@ -292,19 +301,19 @@ const LawyerDashboard = () => {
                 ))}
               </div>
 
-              {/* Performance Grid Sections */}
+             
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
-                {/* Visual Chart Bars Component */}
-                <div className="border border-[#131B2E] bg-[#090D1A]/40 p-4 sm:p-6 space-y-4">
+               
+                <div className="border border-[#131B2E] bg-[#090D1A]/40 p-4 sm:p-6 space-y-4 lg:col-span-1">
                   <h3 className="text-xs font-mono text-[#FCBA80] uppercase tracking-wider border-b border-[#131B2E] pb-2">
-                    Operational Allocation Matrix
+                    Settlement Status
                   </h3>
                   <div className="space-y-4 pt-2">
                     {[
-                      { label: "Pending Load Cap", percentage: dashboardStats.total > 0 ? Math.round((dashboardStats.pending / dashboardStats.total) * 100) : 0, color: "bg-amber-500" },
-                      { label: "Urgency Saturation", percentage: dashboardStats.pending > 0 ? Math.round((dashboardStats.highUrgency / dashboardStats.pending) * 100) : 0, color: "bg-rose-500" },
-                      { label: "Client Star Ratio", percentage: Math.round((parseFloat(dashboardStats.averageRating) / 5) * 100), color: "bg-emerald-500" }
+                      { label: "Collection / Paid Rate", percentage: (dashboardStats.totalEarning + dashboardStats.totalUnpaidRevenue) > 0 ? Math.round((dashboardStats.totalEarning / (dashboardStats.totalEarning + dashboardStats.totalUnpaidRevenue)) * 100) : 0, color: "bg-emerald-500" },
+                      { label: "Pending Arrears Ratio", percentage: (dashboardStats.totalEarning + dashboardStats.totalUnpaidRevenue) > 0 ? Math.round((dashboardStats.totalUnpaidRevenue / (dashboardStats.totalEarning + dashboardStats.totalUnpaidRevenue)) * 100) : 0, color: "bg-amber-500" },
+                      { label: "Urgent Queue Volume", percentage: dashboardStats.total > 0 ? Math.round((dashboardStats.highUrgency / dashboardStats.total) * 100) : 0, color: "bg-rose-500" }
                     ].map((bar, index) => (
                       <div key={index} className="space-y-1.5">
                         <div className="flex justify-between text-[10px] font-mono">
@@ -322,47 +331,59 @@ const LawyerDashboard = () => {
                   </div>
                 </div>
 
-                <div className="border border-[#131B2E] bg-[#090D1A]/40 p-4 sm:p-6">
-                  <h3 className="text-xs font-mono text-[#FCBA80] uppercase tracking-wider border-b border-[#131B2E] pb-2 mb-4">
-                    Immediate Action Log
-                  </h3>
-                  {requests.filter(r => r.status === "pending" || !r.status).length === 0 ? (
-                    <div className="text-center py-8 text-xs font-mono text-gray-500">
-                      No critical actions needed. Pipeline is clean.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {requests.filter(r => r.status === "pending" || !r.status).slice(0, 2).map((item) => (
-                        <div key={item._id} className="flex justify-between items-center bg-[#070b14] border border-[#131B2E] p-3 text-xs gap-2">
-                          <div className="min-w-0">
-                            <p className="text-white font-medium truncate">{item.clientName}</p>
-                            <p className="text-[10px] font-mono text-gray-500 truncate">{item.caseType}</p>
-                          </div>
-                          <button 
-                            onClick={() => setActiveMenu("history")}
-                            className="text-[10px] font-mono border border-zinc-800 hover:bg-[#FCBA80] hover:text-black transition-all px-2.5 py-1 shrink-0"
-                          >
-                            Review
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="border border-[#131B2E] bg-[#090D1A]/40 p-4 sm:p-6 flex flex-col justify-between gap-4">
+               
+                <div className="border border-[#131B2E] bg-[#090D1A]/40 p-4 sm:p-6 lg:col-span-2 flex flex-col justify-between">
                   <div>
-                    <h3 className="text-xs font-mono text-gray-400 uppercase tracking-wider mb-2">Live Ingestion</h3>
-                    <div className="text-lg font-serif text-[#FCBA80]">LexVizo Data Inbound</div>
-                    <p className="text-[11px] text-gray-500 font-mono mt-2 leading-relaxed">
-                      Aggregating active legal corpus data pool. Processed index counts are standing at {dashboardStats.totalComments} verified ratings.
-                    </p>
+                    <h3 className="text-xs font-mono text-[#FCBA80] uppercase tracking-wider border-b border-[#131B2E] pb-2 mb-4">
+                      Client Settlement Inbound Registry
+                    </h3>
+                    
+                    {requests.length === 0 ? (
+                      <div className="text-center py-8 text-xs font-mono text-gray-500">
+                        No processing operations or historical data logs found.
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left font-mono text-[11px] border-collapse">
+                          <thead>
+                            <tr className="border-b border-[#131B2E] text-gray-500 uppercase tracking-wider text-[9px]">
+                              <th className="pb-2 font-normal">Client Account</th>
+                              <th className="pb-2 font-normal">Service Type</th>
+                              <th className="pb-2 font-normal text-right">Fee Charge</th>
+                              <th className="pb-2 font-normal text-right">Payment Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#131B2E]/40">
+                            {requests.slice(0, 5).map((item) => {
+                              const isPaid = item.status === "paid";
+                              return (
+                                <tr key={item._id?.$oid || item._id} className="hover:bg-[#0E1526]/30 transition-colors">
+                                  <td className="py-2.5 text-white pr-2 max-w-[120px] truncate">{item.clientName}</td>
+                                  <td className="py-2.5 text-gray-400 uppercase text-[10px] pr-2 max-w-[140px] truncate">{item.caseType || "General Retainer"}</td>
+                                  <td className="py-2.5 text-right font-bold text-white">${item.pricingDetails?.amount || 0}</td>
+                                  <td className="py-2.5 text-right">
+                                    <span className={`inline-block text-[9px] px-2 py-0.5 font-bold border uppercase tracking-wider ${
+                                      isPaid 
+                                        ? "bg-emerald-950/40 border-emerald-900/60 text-emerald-400" 
+                                        : "bg-amber-950/40 border-amber-900/60 text-amber-400"
+                                    }`}>
+                                      {isPaid ? "Paid" : "Pending"}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
+
                   <button 
                     onClick={() => setActiveMenu("history")}
-                    className="text-[10px] font-mono text-[#FCBA80] uppercase flex items-center gap-2 hover:text-white transition-all pt-2"
+                    className="text-[10px] font-mono text-[#FCBA80] uppercase flex items-center gap-2 hover:text-white transition-all pt-4 border-t border-[#131B2E]/60 mt-4 w-fit"
                   >
-                    Enter Inbound Pipeline <ArrowRight size={12} />
+                    Examine Entire Client Registry History <ArrowRight size={12} />
                   </button>
                 </div>
 

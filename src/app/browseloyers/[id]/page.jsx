@@ -13,7 +13,7 @@ import {
   Briefcase,
   CheckCircle2,
   Star,
-  EyeOff // Added to represent busy profile configurations
+  EyeOff
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { fetchLawyersList } from "@/lib/actions/lawyer";
@@ -45,7 +45,6 @@ const LawyerDetailsPage = () => {
   const [selectedService, setSelectedService] = useState(null);
   const [isSubmittingHire, setIsSubmittingHire] = useState(false);
 
-  // Computes the average rating dynamically based on comment telemetry arrays
   const getTherating = async (lawyerid) => {
     try {
       const comments = await fetchCommentsAction(lawyerid);
@@ -131,7 +130,6 @@ const LawyerDetailsPage = () => {
   }, [id]);
 
   const openRetainerModal = (servicePackage = null) => {
-    // Structural guard check protecting workflow integrity if the profile states fully booked
     if (lawyer?.isBusy) {
       toast.error("Counsel allocation rejected. This practitioner is currently fully booked.");
       return;
@@ -142,6 +140,7 @@ const LawyerDetailsPage = () => {
       return;
     }
 
+    // Explicit fallback condition that stops the main banner button from overwriting your service card configurations
     if (servicePackage) {
       setSelectedService(servicePackage);
     } else if (!selectedService && lawyerServices.length > 0) {
@@ -165,16 +164,21 @@ const LawyerDetailsPage = () => {
 
     setIsSubmittingHire(true);
 
+    // Strict parameter evaluation ensuring object values exist securely before mapping payload variables
+    const validServiceSelected = selectedService && selectedService._id;
+
     const payload = {
       clientId: currentUserId,
       clientName: currentUserName || "NoName",
       clientEmail: currentUserEmail || "",
       lawyerId: lawyer._id,
       lawyerUserId: lawyer.userId,
-      caseType: selectedService ? selectedService.title : lawyer.specialization || "General Legal Counsel",
-      urgency: selectedService ? "STANDARD" : "HIGH",
-      serviceId: selectedService?._id || null,
-      pricingDetails: selectedService 
+      lawyerName: lawyer.name || "Unknown Professional",
+      lawyerImage: lawyer.profileImg || "", 
+      caseType: validServiceSelected ? selectedService.title : (lawyer.specialization || "General Legal Counsel"),
+      urgency: validServiceSelected ? "STANDARD" : "HIGH",
+      serviceId: validServiceSelected ? selectedService._id : null,
+      pricingDetails: validServiceSelected 
         ? { type: "package", amount: selectedService.price }
         : { type: "hourly", amount: lawyer.hourlyFee },
       status: "pending"
@@ -182,11 +186,11 @@ const LawyerDetailsPage = () => {
 
     try {
       await createHiringRequestAction(payload);
-      const allocationType = selectedService ? `the "${selectedService.title}" package` : "a flat standard retainer";
+      const allocationType = validServiceSelected ? `the "${selectedService.title}" package` : "a flat standard retainer";
       toast.success(`Retainer request submitted securely for ${allocationType} to ${lawyer?.name}`);
       setHireModalOpen(false);
     } catch (error) {
-      console.error(error);
+      console.error("Pipeline Transmission Error Details:", error);
       toast.error("Failed to transmit hiring pipeline request payload data structures.");
     } finally {
       setIsSubmittingHire(false);
@@ -271,7 +275,6 @@ const LawyerDetailsPage = () => {
           </div>
 
           <div className="pt-2 space-y-8">
-            {/* Primary Hire Retainer Action Button */}
             {lawyer.isBusy ? (
               <button 
                 disabled
@@ -285,7 +288,7 @@ const LawyerDetailsPage = () => {
                 onClick={() => openRetainerModal(null)} 
                 className="group flex items-center justify-between border border-[#FCBA80] bg-[#FCBA80] text-black px-6 py-4 w-full md:w-72 font-mono text-xs uppercase font-bold tracking-widest hover:bg-transparent hover:text-[#FCBA80] transition-all duration-300"
               >
-                <span>{selectedService ? "Retain Selected Package" : "Hire Counsel Retainer"}</span>
+                <span>{selectedService ? `Retain: ${selectedService.title}` : "Hire Counsel Retainer"}</span>
                 <ArrowUpRight size={16} />
               </button>
             )}
@@ -312,7 +315,7 @@ const LawyerDetailsPage = () => {
                           lawyer.isBusy 
                             ? "border-[#131B2E] opacity-50 cursor-not-allowed" 
                             : isSelected 
-                              ? "border-[#FCBA80] bg-[#FCBA80]/5 shadow-[0_0_15px_rgba(252,186,128,0.05)] cursor-pointer hover:border-[#FCBA80]/40" 
+                              ? "border-[#FCBA80] bg-[#FCBA80]/5 shadow-[0_0_15px_rgba(252,186,128,0.05)] cursor-pointer" 
                               : "border-[#131B2E] cursor-pointer hover:border-[#FCBA80]/40"
                         }`}
                       >
@@ -337,9 +340,9 @@ const LawyerDetailsPage = () => {
                             <span className="text-gray-200 font-bold">${service.price} {lawyer.currency || "BDT"}</span>
                           </div>
                           
-                          {/* Package-specific Selector Buttons */}
                           <button 
                             disabled={lawyer.isBusy}
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               openRetainerModal(service);
@@ -391,7 +394,7 @@ const LawyerDetailsPage = () => {
               )}
             </div>
             <div className="grid grid-cols-2 gap-3 pt-2">
-              <button onClick={() => setHireModalOpen(false)} className="border border-[#131B2E] py-2 text-xs font-mono uppercase text-gray-400 hover:text-white transition-colors">Abort Protocol</button>
+              <button type="button" onClick={() => setHireModalOpen(false)} className="border border-[#131B2E] py-2 text-xs font-mono uppercase text-gray-400 hover:text-white transition-colors">Abort Protocol</button>
               <button onClick={handleHireRequest} disabled={isSubmittingHire || lawyer.isBusy} className="bg-[#FCBA80] text-black py-2 text-xs font-mono font-bold uppercase tracking-wide hover:bg-[#E2A76F] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
                 {isSubmittingHire ? <div className="w-3 h-3 border border-black border-t-transparent animate-spin rounded-full" /> : "Confirm & Disclose"}
               </button>

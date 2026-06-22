@@ -1,6 +1,6 @@
 "use client";
 import React, { useTransition, useState, useEffect, useMemo } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, DollarSign, Users, Clock, CheckCircle } from "lucide-react";
 import { getPendingRequestsAction, updateRequestStatusAction } from "@/lib/actions/api/hiring";
 import { GetLawyerData } from "@/lib/actions/api/lawyerdata";
 import { GetUserImage } from "@/lib/actions/api/images";
@@ -18,8 +18,6 @@ const ClientAvatar = ({ clientUserId, clientName }) => {
       }
       try {
         const data = await GetUserImage(clientUserId);
-        
-        // FIX: Extracting "imageUrl" field matching your database schema payload format
         if (data && typeof data === "string") {
           setImageUrl(data);
         } else if (data?.imageUrl) {
@@ -51,7 +49,7 @@ const ClientAvatar = ({ clientUserId, clientName }) => {
           src={imageUrl} 
           alt={clientName || "Client"} 
           className="w-full h-full object-cover text-transparent"
-          onError={() => setImageUrl(null)} // fallback protection if image URL breaks
+          onError={() => setImageUrl(null)}
         />
       ) : (
         initials
@@ -62,6 +60,7 @@ const ClientAvatar = ({ clientUserId, clientName }) => {
 
 const HiringHistory = ({ initialRequests = [], userid }) => {
   const [requests, setRequests] = useState(initialRequests);
+  const [activeTab, setActiveTab] = useState("pending"); // "pending" | "paid"
   const [isPending, startTransition] = useTransition();
 
   // Fetch requests dynamically when userid changes
@@ -86,13 +85,16 @@ const HiringHistory = ({ initialRequests = [], userid }) => {
   // Compute dynamic stats from live state data
   const analytics = useMemo(() => {
     const total = requests.length;
-    const pendingCount = requests.filter((r) => r.status === "pending" || r.status === undefined).length;
     
-    const processedRequests = requests.filter((r) => r.status === "accepted" || r.status === "rejected");
-    const acceptedCount = processedRequests.filter((r) => r.status === "accepted").length;
-    const acceptanceRate = processedRequests.length > 0 
-      ? Math.round((acceptedCount / processedRequests.length) * 100) 
-      : 100;
+    // Split requests by structural categories
+    const pendingRequests = requests.filter((r) => r.status === "pending" || !r.status);
+    
+    // Assuming "accepted" means they paid you, or your backend sets a flag like `.isPaid` or status === "paid"
+    // Change "accepted" to "paid" below if your database saves payment collections explicitly.
+    const paidRequests = requests.filter((r) => r.status === "accepted" || r.status === "paid");
+    
+    const totalEarnings = paidRequests.reduce((sum, r) => sum + (r.pricingDetails?.amount || 0), 0);
+    const pendingCount = pendingRequests.length;
 
     const caseTypeCounts = {};
     requests.forEach((r) => {
@@ -107,11 +109,17 @@ const HiringHistory = ({ initialRequests = [], userid }) => {
     return {
       total,
       pendingCount,
-      acceptanceRate,
+      paidCount: paidRequests.length,
+      totalEarnings,
       chartData,
       maxCount,
+      pendingRequests,
+      paidRequests,
     };
   }, [requests]);
+
+  // Determine which list to display based on the selected Tab
+  const visibleRequests = activeTab === "pending" ? analytics.pendingRequests : analytics.paidRequests;
 
   const handleStatusUpdate = (requestId, decision) => {
     startTransition(async () => {
@@ -139,20 +147,20 @@ const HiringHistory = ({ initialRequests = [], userid }) => {
           DASHBOARD &gt; HIRING HISTORY
         </div>
         <h2 className="text-2xl sm:text-3xl font-serif text-white tracking-wide">
-          Hiring Requests
+          Hiring Requests & Financials
         </h2>
         <p className="text-xs text-gray-400 mt-1 font-light">
-          Review and manage pending legal engagement requests from potential clients.
+          Review pending client records, manage incoming legal operations, and track payments.
         </p>
       </div>
 
       {/* Dynamic Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Pipeline", val: String(analytics.total).padStart(2, "0") },
+          { label: "Total Operations", val: String(analytics.total).padStart(2, "0") },
           { label: "Pending Action", val: String(analytics.pendingCount).padStart(2, "0"), highlight: analytics.pendingCount > 0 },
-          { label: "Acceptance Rate", val: `${analytics.acceptanceRate}%` },
-          { label: "Active Pipelines", val: String(analytics.chartData.length).padStart(2, "0") },
+          { label: "Paid Clients", val: String(analytics.paidCount).padStart(2, "0") },
+          { label: "Total Revenue", val: `$${analytics.totalEarnings.toLocaleString()}`, highlight: analytics.totalEarnings > 0 },
         ].map((stat, idx) => (
           <div
             key={idx}
@@ -168,23 +176,47 @@ const HiringHistory = ({ initialRequests = [], userid }) => {
         ))}
       </div>
 
+      {/* Navigation Tabs Container */}
+      <div className="flex border-b border-[#131B2E] gap-2 font-mono text-xs">
+        <button
+          onClick={() => setActiveTab("pending")}
+          className={`px-4 py-2 border-t-2 transition-all flex items-center gap-2 ${
+            activeTab === "pending"
+              ? "border-t-[#FCBA80] text-[#FCBA80] bg-[#090D1A]/60 font-semibold"
+              : "border-t-transparent text-gray-400 hover:text-white"
+          }`}
+        >
+          <Clock size={12} /> Pending Requests ({analytics.pendingCount})
+        </button>
+        <button
+          onClick={() => setActiveTab("paid")}
+          className={`px-4 py-2 border-t-2 transition-all flex items-center gap-2 ${
+            activeTab === "paid"
+              ? "border-t-[#FCBA80] text-[#FCBA80] bg-[#090D1A]/60 font-semibold"
+              : "border-t-transparent text-gray-400 hover:text-white"
+          }`}
+        >
+          <DollarSign size={12} /> Earnings & Paid Clients ({analytics.paidCount})
+        </button>
+      </div>
+
       {/* Pipeline Container */}
       <div className="border border-[#131B2E] bg-[#090D1A]/40 overflow-hidden">
         <div className="bg-[#FCBA80] text-black px-4 py-2.5 text-xs font-mono uppercase tracking-widest font-bold flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1">
-          <span>Active Hiring Pipeline</span>
+          <span>{activeTab === "pending" ? "Active Hiring Pipeline" : "Settled Transactions Ledger"}</span>
           <span className="text-[9px] font-mono font-light text-black/70">
-            Last Updated: Just Now
+            {activeTab === "paid" ? `Gross Earnings: $${analytics.totalEarnings.toLocaleString()}` : "Last Updated: Just Now"}
           </span>
         </div>
 
         {/* 1. Mobile-First Card Layout (Hidden on Desktop) */}
         <div className="block md:hidden divide-y divide-[#131B2E]/60">
-          {requests.length === 0 ? (
+          {visibleRequests.length === 0 ? (
             <div className="text-center py-8 text-gray-500 font-mono text-[11px]">
-              No hiring requests found.
+              No clients found in this segment.
             </div>
           ) : (
-            requests.map((row) => (
+            visibleRequests.map((row) => (
               <div key={row._id} className="p-4 space-y-3 bg-[#0A0F1D]/30">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3">
@@ -209,7 +241,7 @@ const HiringHistory = ({ initialRequests = [], userid }) => {
                   <div>
                     <span className="text-[9px] text-gray-600 block uppercase">Case Type</span>
                     <span className="text-gray-300 font-sans">{row.caseType}</span>
-                    <span className="text-[10px] text-gray-500 block capitalize mt-0.5">
+                    <span className="text-[10px] text-[#FCBA80] block capitalize mt-0.5 font-semibold">
                       {row.pricingDetails?.type || "Rate"}: ${row.pricingDetails?.amount?.toLocaleString() || "0"}
                     </span>
                   </div>
@@ -225,10 +257,11 @@ const HiringHistory = ({ initialRequests = [], userid }) => {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-[#131B2E]/40 flex justify-end">
+                <div className="pt-2 border-t border-zinc-900/40 flex justify-end">
                   {row.status !== "pending" && row.status ? (
-                    <span className={`text-[10px] font-mono uppercase font-bold tracking-wider ${row.status === "accepted" ? "text-emerald-400" : "text-rose-500"}`}>
-                      {row.status}
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-wider flex items-center gap-1 ${row.status === "accepted" || row.status === "paid" ? "text-emerald-400" : "text-rose-500"}`}>
+                      {(row.status === "accepted" || row.status === "paid") && <CheckCircle size={10} />}
+                      {row.status === "accepted" ? "PAID & ACTIVE" : row.status}
                     </span>
                   ) : (
                     <div className="flex gap-2 font-mono text-[10px] w-full sm:w-auto">
@@ -263,18 +296,18 @@ const HiringHistory = ({ initialRequests = [], userid }) => {
                 <th className="py-3 px-4 font-normal">Case Type</th>
                 <th className="py-3 px-4 font-normal">Request Date</th>
                 <th className="py-3 px-4 font-normal">Urgency</th>
-                <th className="py-3 px-4 font-normal text-right">Actions</th>
+                <th className="py-3 px-4 font-normal text-right">{activeTab === "pending" ? "Actions" : "Status / Revenue"}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#131B2E]/60 text-xs font-light">
-              {requests.length === 0 ? (
+              {visibleRequests.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="text-center py-8 text-gray-500 font-mono text-[11px]">
-                    No hiring requests found.
+                    No clients found in this segment.
                   </td>
                 </tr>
               ) : (
-                requests.map((row) => (
+                visibleRequests.map((row) => (
                   <tr key={row._id} className="hover:bg-[#0A0F1D]/60 transition-colors">
                     <td className="py-4 px-4 flex items-center gap-3">
                       <ClientAvatar clientUserId={row.clientId || row.userId} clientName={row.clientName} />
@@ -288,7 +321,7 @@ const HiringHistory = ({ initialRequests = [], userid }) => {
 
                     <td className="py-4 px-4 text-gray-300">
                       <div>{row.caseType}</div>
-                      <div className="text-[10px] text-gray-500 font-mono mt-0.5 capitalize">
+                      <div className="text-[10px] text-[#FCBA80] font-mono mt-0.5 capitalize font-medium">
                         {row.pricingDetails?.type || "Rate"}: ${row.pricingDetails?.amount?.toLocaleString() || "0"}
                       </div>
                     </td>
@@ -315,8 +348,9 @@ const HiringHistory = ({ initialRequests = [], userid }) => {
 
                     <td className="py-4 px-4 text-right">
                       {row.status !== "pending" && row.status ? (
-                        <span className={`text-[10px] font-mono uppercase font-bold tracking-wider ${row.status === "accepted" ? "text-emerald-400" : "text-rose-500"}`}>
-                          {row.status}
+                        <span className={`text-[10px] font-mono uppercase font-bold tracking-wider inline-flex items-center gap-1.5 ${row.status === "accepted" || row.status === "paid" ? "text-emerald-400" : "text-rose-500"}`}>
+                          {(row.status === "accepted" || row.status === "paid") && <CheckCircle size={11} />}
+                          {row.status === "accepted" ? "PAID & ACTIVE" : row.status}
                         </span>
                       ) : (
                         <div className="flex justify-end gap-2 font-mono text-[10px]">
@@ -383,14 +417,14 @@ const HiringHistory = ({ initialRequests = [], userid }) => {
         <div className="border border-[#131B2E] bg-[#090D1A]/40 p-4 sm:p-6 flex flex-col justify-between gap-4 border-l-2 border-l-[#FCBA80]">
           <div>
             <div className="text-xs font-mono text-[#FCBA80] tracking-wider uppercase mb-3 flex items-center gap-2">
-              💡 Pro Tip
+              💡 Revenue Optimization
             </div>
             <p className="text-xs text-gray-400 italic font-light leading-relaxed">
-              "Accepted requests with 'High' urgency are typically converted to active retainers 40% faster when handled within 2 hours."
+              "You have captured a gross total of <span className="text-white not-italic font-mono">${analytics.totalEarnings.toLocaleString()}</span> across your active client pipeline profiles."
             </p>
           </div>
           <button className="text-[10px] font-mono text-[#FCBA80] tracking-widest uppercase flex items-center gap-2 hover:text-white transition-all pt-2">
-            View Response Guidelines <ArrowRight size={12} />
+            View Financial Ledger Guidelines <ArrowRight size={12} />
           </button>
         </div>
       </div>
