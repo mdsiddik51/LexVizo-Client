@@ -14,9 +14,9 @@ import { User, ArrowUpRight } from "lucide-react";
 
 import { fetchLawyersList } from "@/lib/actions/lawyer";
 import { GetUserImage } from "@/lib/actions/api/images";
-import { FeaturedLawyerRating } from './components/comments/Home/featuredlawyer';
-import { CategoryCard } from './components/comments/Home/CategoryCard';
-import { FeatureCard } from './components/comments/Home/FeatureCard';
+import { FeaturedLawyerRating } from './components/Home/featuredlawyer';
+import { CategoryCard } from './components/Home/CategoryCard';
+import { FeatureCard } from './components/Home/FeatureCard';
 
 const categories = [
   { title: "Criminal Law", desc: "Defense against state and federal charges.", icon: FaGavel },
