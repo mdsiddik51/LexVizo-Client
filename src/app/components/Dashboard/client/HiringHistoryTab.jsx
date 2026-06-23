@@ -3,6 +3,8 @@ import React from "react";
 import { User } from "lucide-react";
 
 const HiringHistoryTab = ({ hiringHistory, isLoading, paymentSuccessId, handlePayment }) => {
+
+
   
   // Calculate pipeline metric aggregates dynamically based on the returned database payload
   const totalRequests = hiringHistory.length;
@@ -127,6 +129,7 @@ const HiringHistoryTab = ({ hiringHistory, isLoading, paymentSuccessId, handlePa
 
                     {item.status === 'accepted' && (
                       <div className="pt-2 flex justify-end">
+                        {/* FIXED: Check using parsed itemId instead of item._id map mismatch */}
                         {paymentSuccessId === itemId ? (
                           <span className="text-teal-400 text-xs font-mono py-1 animate-pulse">✓ Retainer Paid</span>
                         ) : (

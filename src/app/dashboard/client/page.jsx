@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
 import { AlertTriangle, X } from "lucide-react";
 
-// Data pipelines
 import {
   GetUserImage,
   ProfileImage,
@@ -18,7 +17,6 @@ import ManageProfileTab from "@/app/components/Dashboard/client/ManageProfileTab
 import CommentsManagementTab from "@/app/components/Dashboard/client/CommentsManagementTab";
 import HiringHistoryTab from "@/app/components/Dashboard/client/HiringHistoryTab";
 
-// Updated Comment & Hiring Actions
 import {
   getUserCommentsAction,
   updateCommentAction,
@@ -38,12 +36,10 @@ export default function UserDashboard() {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Dynamic hiring history system states
   const [hiringHistory, setHiringHistory] = useState([]);
   const [isFetchingHiring, setIsFetchingHiring] = useState(false);
   const [paymentSuccessId, setPaymentSuccessId] = useState(null);
 
-  // Dynamic comments system states
   const [comments, setComments] = useState([]);
   const [isFetchingComments, setIsFetchingComments] = useState(false);
   const [editingComment, setEditingComment] = useState(null);
@@ -52,7 +48,6 @@ export default function UserDashboard() {
   
   const [commentToDelete, setCommentToDelete] = useState(null);
 
-  // Fetch Live Hiring History Pipeline
   const fetchClientHiringRequests = async () => {
     if (!sessionUser?.id) return;
     setIsFetchingHiring(true);
@@ -67,7 +62,6 @@ export default function UserDashboard() {
     }
   };
 
-  // Dynamic comments system fetcher
   const fetchUserComments = async () => {
     if (!sessionUser?.id) return;
     setIsFetchingComments(true);
@@ -82,7 +76,6 @@ export default function UserDashboard() {
     }
   };
 
-  // Hook into active tab view switches to pull accurate telemetry data
   useEffect(() => {
     if (sessionUser?.id) {
       if (activeTab === "hiring-history") {
@@ -92,6 +85,37 @@ export default function UserDashboard() {
       }
     }
   }, [sessionUser?.id, activeTab]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !sessionUser?.id) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentSuccess = urlParams.get("payment_success");
+    const sessionId = urlParams.get("session_id");
+    const targetHiringId = urlParams.get("hiringId");
+
+    if (paymentSuccess === "true" && sessionId && targetHiringId) {
+      const verifyStripePaymentOnReturn = async () => {
+        const syncToast = toast.loading("Verifying transaction parameters with central ledger...");
+        try {
+          const verifiedRequest = await completeHiringPaymentAction(targetHiringId, sessionId);
+          
+          if (verifiedRequest) {
+            toast.success("Transaction verified! Retainer paid successfully.", { id: syncToast });
+            setPaymentSuccessId(targetHiringId);
+            fetchClientHiringRequests();
+            
+            window.history.replaceState({}, document.title, window.location.pathname);
+            setTimeout(() => setPaymentSuccessId(null), 5000);
+          }
+        } catch (err) {
+          console.error("Verification sync failed:", err);
+          toast.error("Could not sync Stripe session parameter logs.", { id: syncToast });
+        }
+      };
+      verifyStripePaymentOnReturn();
+    }
+  }, [sessionUser?.id]);
 
   useEffect(() => {
     if (sessionUser?.name) {
@@ -271,27 +295,45 @@ export default function UserDashboard() {
     }
   };
 
-  // Process Real Database Actions inside the payment handler
-  const handlePayment = async (requestId) => {
-    const toastId = toast.loading("Initializing secure transaction gateway...");
-    try {
-      const mockDetails = {
-        transactionId: `TXN-${Math.random().toString(36).substring(2, 11).toUpperCase()}`,
-        gateway: "Stripe_Node_V3"
-      };
+  const handlePayment = async (hiringRequestId) => {
+    if (!hiringRequestId) {
+      toast.error("Invalid hiring request context passed.");
+      return;
+    }
 
-      const updatedRequest = await completeHiringPaymentAction(requestId, mockDetails);
-      
-      if (updatedRequest) {
-        // Mutate local layout parameters immediately to present active changes dynamically
-        setHiringHistory(prev => prev.map(req => (req._id === requestId ? updatedRequest : req)));
-        setPaymentSuccessId(requestId);
-        toast.success("Retainer Fee paid successfully!", { id: toastId });
-        setTimeout(() => setPaymentSuccessId(null), 4000);
+    const toastId = toast.loading("Initializing secure Stripe session gateway...");
+    const BaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+    
+    try {
+      const response = await fetch(`${BaseUrl}/api/payment/create-checkout-session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          hiringId: String(hiringRequestId)
+        }),
+      });
+
+      const responseText = await response.text();
+      let responseData = {};
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        throw new Error(`Server returned non-JSON structure (Status ${response.status})`);
+      }
+
+      if (!response.ok) {
+        throw new Error(responseData.error || responseData.details || "Server error occurred");
+      }
+
+      if (responseData.url) {
+        toast.loading("Redirecting to Stripe credit card portal...", { id: toastId });
+        window.location.href = responseData.url;
+      } else {
+        throw new Error("No URL returned from checkout generation session endpoint.");
       }
     } catch (error) {
-      console.error("Payment pipeline error:", error);
-      toast.error(error.message || "Failed to log payment ledger settlement parameters.", { id: toastId });
+      console.error("Payment pipeline gateway error:", error);
+      toast.error(error.message || "Failed to initiate transaction window.", { id: toastId });
     }
   };
 

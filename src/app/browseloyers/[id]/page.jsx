@@ -103,9 +103,7 @@ const LawyerDetailsPage = () => {
         const fallbackServices = servicesData || [];
         setLawyerServices(fallbackServices);
         
-        if (fallbackServices.length > 0) {
-          setSelectedService(fallbackServices[0]);
-        }
+        setSelectedService(null);
 
         setLawyer({
           ...foundLawyer,
@@ -140,11 +138,10 @@ const LawyerDetailsPage = () => {
       return;
     }
 
-    // Explicit fallback condition that stops the main banner button from overwriting your service card configurations
     if (servicePackage) {
       setSelectedService(servicePackage);
-    } else if (!selectedService && lawyerServices.length > 0) {
-      setSelectedService(lawyerServices[0]);
+    } else {
+      setSelectedService(null);
     }
     
     setHireModalOpen(true);
@@ -164,8 +161,22 @@ const LawyerDetailsPage = () => {
 
     setIsSubmittingHire(true);
 
-    // Strict parameter evaluation ensuring object values exist securely before mapping payload variables
-    const validServiceSelected = selectedService && selectedService._id;
+    // Completely bulletproof sanitizer for parsing incoming price integers or strings safely
+    const safeParseFloat = (value) => {
+      if (value === null || value === undefined) return 0;
+      if (typeof value === "number") return isNaN(value) ? 0 : value;
+      
+      const parsed = parseFloat(String(value).replace(/[^0-9.]/g, ""));
+      return isNaN(parsed) ? 0 : parsed;
+    };
+
+    const hasPackage = selectedService && selectedService._id;
+    const initialPrice = hasPackage 
+      ? safeParseFloat(selectedService.price) 
+      : safeParseFloat(lawyer?.hourlyFee);
+
+    // Guaranteed dynamic fallback assertion ensuring final assignment evaluates to a valid number type above zero
+    const finalPrice = (!initialPrice || initialPrice <= 0) ? 100 : initialPrice;
 
     const payload = {
       clientId: currentUserId,
@@ -175,18 +186,19 @@ const LawyerDetailsPage = () => {
       lawyerUserId: lawyer.userId,
       lawyerName: lawyer.name || "Unknown Professional",
       lawyerImage: lawyer.profileImg || "", 
-      caseType: validServiceSelected ? selectedService.title : (lawyer.specialization || "General Legal Counsel"),
-      urgency: validServiceSelected ? "STANDARD" : "HIGH",
-      serviceId: validServiceSelected ? selectedService._id : null,
-      pricingDetails: validServiceSelected 
-        ? { type: "package", amount: selectedService.price }
-        : { type: "hourly", amount: lawyer.hourlyFee },
+      caseType: hasPackage ? selectedService.title : (lawyer.specialization || "General Legal Counsel"),
+      urgency: hasPackage ? "STANDARD" : "HIGH",
+      serviceId: hasPackage ? selectedService._id : null,
+      pricingDetails: {
+        type: hasPackage ? "package" : "hourly",
+        amount: finalPrice
+      },
       status: "pending"
     };
 
     try {
       await createHiringRequestAction(payload);
-      const allocationType = validServiceSelected ? `the "${selectedService.title}" package` : "a flat standard retainer";
+      const allocationType = hasPackage ? `the "${selectedService.title}" package` : "a flat standard retainer";
       toast.success(`Retainer request submitted securely for ${allocationType} to ${lawyer?.name}`);
       setHireModalOpen(false);
     } catch (error) {
@@ -257,7 +269,7 @@ const LawyerDetailsPage = () => {
           <div className="border-t border-b border-[#131B2E] py-4 grid grid-cols-3 gap-2 font-mono text-[11px] text-gray-400">
             <div className="flex items-center gap-2">
               <DollarSign size={14} className="text-[#FCBA80]" />
-              <span>Rate: <strong className="text-white">${lawyer.hourlyFee} {lawyer.currency || "BDT"}/hr</strong></span>
+              <span>Rate: <strong className="text-white">${lawyer.hourlyFee || 100} {lawyer.currency || "BDT"}/hr</strong></span>
             </div>
             <div className="flex items-center gap-2">
               <Star size={14} className="text-[#FCBA80] fill-[#FCBA80]/10" />
@@ -311,7 +323,7 @@ const LawyerDetailsPage = () => {
                       <div 
                         key={service._id || index} 
                         onClick={() => !lawyer.isBusy && setSelectedService(service)}
-                        className={`border transition-all duration-200 bg-[#0A0F1D]/40 p-4 space-y-4 flex flex-col justify-between ${
+                        className={`border transition-all duration-200 bg-[#0A0F1D]/40 p-4 space-y-4 flex flex-col justify-between text-left ${
                           lawyer.isBusy 
                             ? "border-[#131B2E] opacity-50 cursor-not-allowed" 
                             : isSelected 
@@ -326,8 +338,8 @@ const LawyerDetailsPage = () => {
                               <h4 className="text-xs font-mono uppercase tracking-wide font-bold">{service.title || "Consultation Brief"}</h4>
                             </div>
                             {!lawyer.isBusy && isSelected && (
-                              <span className="text-[8px] font-mono tracking-tight bg-[#FCBA80] text-black px-1 py-0.5 font-bold uppercase">
-                                [ Active Mandate ]
+                              <span className="text-[8px] font-mono tracking-tight bg-[#FCBA80] text-black px-1.5 py-0.5 font-bold uppercase">
+                                [ Active ]
                               </span>
                             )}
                           </div>
@@ -344,10 +356,10 @@ const LawyerDetailsPage = () => {
                             disabled={lawyer.isBusy}
                             type="button"
                             onClick={(e) => {
-                              e.stopPropagation();
+                              e.stopPropagation(); 
                               openRetainerModal(service);
                             }} 
-                            className={`w-full font-mono text-[9px] py-1.5 uppercase font-bold tracking-wider transition-all duration-200 border ${
+                            className={`w-full font-mono text-[9px] py-2 uppercase font-bold tracking-wider transition-all duration-200 border ${
                               lawyer.isBusy
                                 ? "border-zinc-800 bg-zinc-900 text-zinc-500 cursor-not-allowed"
                                 : isSelected 
@@ -374,7 +386,10 @@ const LawyerDetailsPage = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setHireModalOpen(false)} />
           <div className="relative w-full max-w-md border border-[#131B2E] bg-[#0A0F1D] p-6 text-white space-y-6">
-            <button onClick={() => setHireModalOpen(false)} className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors">
+            <button 
+              onClick={() => setHireModalOpen(false)} 
+              className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"
+            >
               <X size={16} />
             </button>
             <div className="space-y-1 border-b border-[#131B2E] pb-3">
@@ -390,12 +405,22 @@ const LawyerDetailsPage = () => {
                   <div className="flex justify-between"><span className="text-gray-600">Package Pricing:</span><span className="text-[#FCBA80]">${selectedService.price} {lawyer.currency || "BDT"}</span></div>
                 </>
               ) : (
-                <div className="flex justify-between"><span className="text-gray-600">Hourly Rate:</span><span className="text-[#FCBA80]">${lawyer.hourlyFee} {lawyer.currency || "BDT"}/hr</span></div>
+                <div className="flex justify-between"><span className="text-gray-600">Hourly Rate:</span><span className="text-[#FCBA80]">${lawyer.hourlyFee || 100} {lawyer.currency || "BDT"}/hr</span></div>
               )}
             </div>
             <div className="grid grid-cols-2 gap-3 pt-2">
-              <button type="button" onClick={() => setHireModalOpen(false)} className="border border-[#131B2E] py-2 text-xs font-mono uppercase text-gray-400 hover:text-white transition-colors">Abort Protocol</button>
-              <button onClick={handleHireRequest} disabled={isSubmittingHire || lawyer.isBusy} className="bg-[#FCBA80] text-black py-2 text-xs font-mono font-bold uppercase tracking-wide hover:bg-[#E2A76F] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
+              <button 
+                type="button" 
+                onClick={() => setHireModalOpen(false)} 
+                className="border border-[#131B2E] py-2 text-xs font-mono uppercase text-gray-400 hover:text-white transition-colors"
+              >
+                Abort Protocol
+              </button>
+              <button 
+                onClick={handleHireRequest} 
+                disabled={isSubmittingHire || lawyer.isBusy} 
+                className="bg-[#FCBA80] text-black py-2 text-xs font-mono font-bold uppercase tracking-wide hover:bg-[#E2A76F] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
                 {isSubmittingHire ? <div className="w-3 h-3 border border-black border-t-transparent animate-spin rounded-full" /> : "Confirm & Disclose"}
               </button>
             </div>

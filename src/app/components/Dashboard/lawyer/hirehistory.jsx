@@ -86,11 +86,10 @@ const HiringHistory = ({ initialRequests = [], userid }) => {
   const analytics = useMemo(() => {
     const total = requests.length;
     
-    // Split requests by structural categories
+    // Pending requests are items marked explicitly as pending or missing status completely
     const pendingRequests = requests.filter((r) => r.status === "pending" || !r.status);
     
-    // Assuming "accepted" means they paid you, or your backend sets a flag like `.isPaid` or status === "paid"
-    // Change "accepted" to "paid" below if your database saves payment collections explicitly.
+    // Match against both "accepted" and your live database signature "paid"
     const paidRequests = requests.filter((r) => r.status === "accepted" || r.status === "paid");
     
     const totalEarnings = paidRequests.reduce((sum, r) => sum + (r.pricingDetails?.amount || 0), 0);
@@ -261,7 +260,7 @@ const HiringHistory = ({ initialRequests = [], userid }) => {
                   {row.status !== "pending" && row.status ? (
                     <span className={`text-[10px] font-mono uppercase font-bold tracking-wider flex items-center gap-1 ${row.status === "accepted" || row.status === "paid" ? "text-emerald-400" : "text-rose-500"}`}>
                       {(row.status === "accepted" || row.status === "paid") && <CheckCircle size={10} />}
-                      {row.status === "accepted" ? "PAID & ACTIVE" : row.status}
+                      {row.status === "accepted" || row.status === "paid" ? "PAID & ACTIVE" : row.status}
                     </span>
                   ) : (
                     <div className="flex gap-2 font-mono text-[10px] w-full sm:w-auto">
@@ -350,7 +349,7 @@ const HiringHistory = ({ initialRequests = [], userid }) => {
                       {row.status !== "pending" && row.status ? (
                         <span className={`text-[10px] font-mono uppercase font-bold tracking-wider inline-flex items-center gap-1.5 ${row.status === "accepted" || row.status === "paid" ? "text-emerald-400" : "text-rose-500"}`}>
                           {(row.status === "accepted" || row.status === "paid") && <CheckCircle size={11} />}
-                          {row.status === "accepted" ? "PAID & ACTIVE" : row.status}
+                          {row.status === "accepted" || row.status === "paid" ? "PAID & ACTIVE" : row.status}
                         </span>
                       ) : (
                         <div className="flex justify-end gap-2 font-mono text-[10px]">
