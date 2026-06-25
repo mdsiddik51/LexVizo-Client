@@ -54,3 +54,8 @@ Ensure that you establish appropriate variable parameters in your configuration 
 - `NEXT_PUBLIC_IMG_UP_DATA` (imgBB API key vector)
 - `BETTER_AUTH_SECRET` (Session encrypting key)
 - `CLIENT_URI` & `NEXT_URI` (Hosting base URLs)
+
+
+---
+
+Live Link --> https://lexvizo.vercel.app

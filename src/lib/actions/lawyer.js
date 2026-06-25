@@ -1,14 +1,14 @@
 'use server';
 
+import { getAuthHeaders } from "./api/authHeaders";
+
 const BaseUrl = process.env.NEXT_PUBLIC_API_URL ;
 
 export const LawyerProfile = async (NewLawyer) => {
     try {
         const response = await fetch(`${BaseUrl}/api/lawyer`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: await getAuthHeaders(),
             body: JSON.stringify(NewLawyer)
         });
 

@@ -27,6 +27,7 @@ const LawyerDetailsPage = () => {
   const { id } = useParams();
 
   const userSession = useSession();
+  const isPending = userSession?.isPending;
   const userRole = userSession?.data?.user?.role || "client";
 
   const currentUserId = userSession?.data?.user?.id;
@@ -130,8 +131,11 @@ const LawyerDetailsPage = () => {
       return;
     }
 
+    if (isPending) return; // still loading session, do nothing
+
     if (!userSession?.data?.user) {
-      toast.error("Authentication required to interact with system profiles.");
+      toast.error("Please log in to hire a lawyer.");
+      router.push('/auth/login');
       return;
     }
 
@@ -152,7 +156,8 @@ const LawyerDetailsPage = () => {
     }
 
     if (!currentUserId) {
-      toast.error("Session missing. Please authenticate.");
+      toast.error("Session missing. Please log in.");
+      router.push('/auth/login');
       return;
     }
 
