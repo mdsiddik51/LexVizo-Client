@@ -1,10 +1,10 @@
 'use server';
 import { revalidatePath } from "next/cache";
+import { getAuthHeaders } from "./authHeaders";
 
-const BaseUrl = process.env.NEXT_URI;
+const BaseUrl = process.env.NEXT_PUBLIC_API_URL;
 
 export const ProfileImage = async ({ userId, imageUrl }) => {
-    // 1. Quick defensive check for missing arguments
     if (!userId || !imageUrl) {
         throw new Error("Missing required fields: userId and imageUrl are required.");
     }
@@ -12,9 +12,7 @@ export const ProfileImage = async ({ userId, imageUrl }) => {
     try {
         const response = await fetch(`${BaseUrl}/api/images`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: await getAuthHeaders(),
             body: JSON.stringify({ userId, imageUrl })
         });
 
@@ -23,16 +21,10 @@ export const ProfileImage = async ({ userId, imageUrl }) => {
         }
 
         const data = await response.json();
-        
-        // 2. Next.js cache revalidation
         revalidatePath('/');
-        
         return data;
     } catch (error) {
-        // Logging the error for server-side debugging
         console.error("Error inside ProfileImage server action:", error);
-        
-        // Re-throwing so the calling client component can catch it and show a UI toast/error message
         throw error; 
     }
 };
@@ -41,7 +33,6 @@ export const GetUserImage = async (userId) => {
     try {
         const response = await fetch(`${BaseUrl}/api/images/${userId}`, {
             method: 'GET',
-            // Cache is set to no-store to ensure we always get the latest update
             cache: 'no-store'
         });
 
@@ -53,14 +44,11 @@ export const GetUserImage = async (userId) => {
     }
 };
 
-// 2. UPDATE: Update existing image by userId
 export const UpdateProfileImage = async ({ userId, imageUrl }) => {
     try {
         const response = await fetch(`${BaseUrl}/api/images/${userId}`, {
             method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: await getAuthHeaders(),
             body: JSON.stringify({ imageUrl })
         });
 

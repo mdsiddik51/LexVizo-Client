@@ -6,11 +6,13 @@ const client = new MongoClient(process.env.MONGO_DB_URI);
 const db = client.db(process.env.DB_CU);
 
 export const auth = betterAuth({
+    baseURL: process.env.NEXT_PUBLIC_APP_URL || process.env.CLIENT_URI,
     user: {
         additionalFields: {
             role: {
                 type: "string",
-                required: true,
+                required: false,
+                defaultValue: "client",
             },
         },
     },
@@ -23,7 +25,21 @@ export const auth = betterAuth({
             clientSecret: process.env.GOOGLE_CLIENT_SEC,
         }
     },
+    databaseHooks: {
+        user: {
+            create: {
+                before: async (user) => {
+                    return {
+                        data: {
+                            ...user,
+                            role: user.role || "client",
+                        },
+                    };
+                },
+            },
+        },
+    },
     database: mongodbAdapter(db, {
         client
     }),
-});
+});

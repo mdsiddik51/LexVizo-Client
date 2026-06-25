@@ -1,17 +1,19 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Button, Link, SearchField } from "@heroui/react";
+import { Button, Link } from "@heroui/react";
 import { ArrowRightFromSquare } from "@gravity-ui/icons";
 import { Dropdown, Label } from "@heroui/react";
 import { signOut, useSession } from "@/lib/auth-client";
 import { GetUserImage } from "@/lib/actions/api/images";
+import { useRouter } from "next/navigation";
 
 const Navbar = () => {
+  const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [profileImgUrl, setProfileImgUrl] = useState("");
+  const [navSearch, setNavSearch] = useState("");
   const { data } = useSession() || { data: null };
   const user = data?.user;
-
 
   useEffect(() => {
     let isMounted = true;
@@ -50,11 +52,19 @@ const Navbar = () => {
   };
 
   const initials = getInitials(user?.name);
-
   
   const handleDropdownAction = async (key) => {
     if (key === "logout") {
       await signOut();
+    } else if (key === "profile") {
+      router.push("/dashboard");
+    }
+  };
+
+  const handleNavSearchSubmit = (e) => {
+    e.preventDefault();
+    if (navSearch.trim()) {
+      router.push(`/browseloyers?search=${encodeURIComponent(navSearch.trim())}`);
     }
   };
 
@@ -62,7 +72,6 @@ const Navbar = () => {
     <div className="w-full bg-[#050811] border-b border-[#131B2E]">
       <nav className="w-11/12 mx-auto max-w-7xl">
         <header className="flex h-20 items-center justify-between px-2 md:px-4">
-          
           
           <div className="flex items-center gap-2 md:gap-4">
             <button
@@ -86,19 +95,21 @@ const Navbar = () => {
             </Link>
           </div>
 
-          {/* Desktop Search */}
-          <div className="hidden md:block w-72">
-            <SearchField name="search" className="w-full">
-              <SearchField.Group className="bg-[#0A0F1D] border border-[#131B2E] focus-within:border-[#FCBA80]/40 transition-all rounded-none h-9 px-3">
-                <SearchField.SearchIcon className="text-gray-500 size-4" />
-                <SearchField.Input 
-                  placeholder="Search..." 
-                  className="text-xs text-gray-300 font-light placeholder-gray-600 focus:outline-none"
-                />
-                <SearchField.ClearButton className="text-gray-500" />
-              </SearchField.Group>
-            </SearchField>
-          </div>
+          {/* Desktop Search Form */}
+          <form onSubmit={handleNavSearchSubmit} className="hidden md:block w-72">
+            <div className="flex items-center bg-[#0A0F1D] border border-[#131B2E] focus-within:border-[#FCBA80]/40 transition-all h-9 px-3">
+              <svg className="h-4 w-4 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input 
+                type="text"
+                placeholder="Search name/specialization..." 
+                value={navSearch}
+                onChange={(e) => setNavSearch(e.target.value)}
+                className="bg-transparent text-xs text-gray-300 font-light placeholder-gray-600 focus:outline-none w-full font-mono"
+              />
+            </div>
+          </form>
 
           {/* Desktop Navigation Links */}
           <div className="hidden md:flex items-center">
@@ -111,7 +122,7 @@ const Navbar = () => {
               </li>
               <li>
                 <Link 
-                  href={user?.role ? `/dashboard/${user.role} ` : "/auth/login"} 
+                  href={user?.role ? "/dashboard" : "/auth/login"} 
                   className="text-gray-300 hover:text-[#FCBA80] transition-colors"
                 >
                   Dashboard
@@ -150,9 +161,6 @@ const Navbar = () => {
                     </div>
                   </div>
                   <Dropdown.Menu className="p-1">
-                    <Dropdown.Item key="profile" textValue="Profile" className="hover:bg-[#131B2E] rounded-none px-3 py-2 text-xs font-mono text-gray-300 transition-colors">
-                      <Label className="cursor-pointer">Profile</Label>
-                    </Dropdown.Item>
                     <Dropdown.Item
                       key="logout"
                       textValue="Logout"
@@ -189,22 +197,30 @@ const Navbar = () => {
           <div className="border-t border-[#131B2E] md:hidden bg-[#050811] animate-fade-in">
             <ul className="flex flex-col gap-4 p-4 text-xs font-mono uppercase tracking-wider">
               <li className="pb-2 border-b border-[#131B2E]">
-                <SearchField name="search" className="w-full">
-                  <SearchField.Group className="bg-[#0A0F1D] border border-[#131B2E] rounded-none h-9 px-3">
-                    <SearchField.SearchIcon className="text-gray-500 size-4" />
-                    <SearchField.Input placeholder="Search..." className="text-xs text-gray-300" />
-                  </SearchField.Group>
-                </SearchField>
+                <form onSubmit={handleNavSearchSubmit} className="w-full">
+                  <div className="flex items-center bg-[#0A0F1D] border border-[#131B2E] h-9 px-3">
+                    <svg className="h-4 w-4 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input 
+                      type="text"
+                      placeholder="Search..." 
+                      value={navSearch}
+                      onChange={(e) => setNavSearch(e.target.value)}
+                      className="bg-transparent text-xs text-gray-300 focus:outline-none w-full"
+                    />
+                  </div>
+                </form>
               </li>
               <li>
                 <Link href="/" onClick={() => setIsMenuOpen(false)} className="text-gray-300 hover:text-[#FCBA80] transition-colors block py-1">Home</Link>
               </li>
               <li>
-                <Link href="/allappointment" onClick={() => setIsMenuOpen(false)} className="text-gray-300 hover:text-[#FCBA80] transition-colors block py-1">All Appointment</Link>
+                <Link href="/browseloyers" onClick={() => setIsMenuOpen(false)} className="text-gray-300 hover:text-[#FCBA80] transition-colors block py-1">Browse Lawyers</Link>
               </li>
               <li>
                 <Link 
-                  href={user?.role ? `/dashboard/${user.role}` : "/dashboard"} 
+                  href={user?.role ? "/dashboard" : "/auth/login"} 
                   onClick={() => setIsMenuOpen(false)} 
                   className="text-gray-300 hover:text-[#FCBA80] transition-colors block py-1"
                 >

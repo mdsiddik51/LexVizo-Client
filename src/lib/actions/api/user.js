@@ -1,8 +1,8 @@
 "use server";
+import { revalidatePath } from "next/cache";
+import { getAuthHeaders } from "./authHeaders";
 
-import { revalidatePath } from "next/cache"; // <-- Imported revalidation tool
-
-const BaseUrl = process.env.NEXT_URI;
+const BaseUrl = process.env.NEXT_PUBLIC_API_URL;
 
 export const updateUserNameAction = async (userId, newName) => {
     try {
@@ -12,10 +12,8 @@ export const updateUserNameAction = async (userId, newName) => {
 
         const response = await fetch(`${BaseUrl}/api/user/${userId}`, {
             method: "PUT",
-            headers: {
-                "Content-Type": "application/json" // Standard JSON header
-            },
-            body: JSON.stringify({ fullName: newName }) // Passing name string directly
+            headers: await getAuthHeaders(),
+            body: JSON.stringify({ fullName: newName })
         });
 
         if (!response.ok) {
@@ -24,14 +22,12 @@ export const updateUserNameAction = async (userId, newName) => {
 
         const result = await response.json();
 
-        // If the backend database mutation succeeds, clear the client-side router cache
         if (result.success) {
-            revalidatePath("/dashboard/client"); // <-- Purges the cache for your client page
+            revalidatePath("/dashboard/client");
             return result.data;
         }
 
         return result;
-
     } catch (error) {
         console.error("Error in updateUserNameAction:", error);
         return null;

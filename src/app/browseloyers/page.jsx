@@ -1,61 +1,12 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Search, SlidersHorizontal, ArrowUpDown, User, ArrowUpRight, Star } from "lucide-react";
+import { Search, SlidersHorizontal, ArrowUpDown, User, ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 import toast from "react-hot-toast";
 import { fetchLawyersList } from "@/lib/actions/lawyer";
 import { GetUserImage } from "@/lib/actions/api/images";
-import { fetchCommentsAction } from "@/lib/actions/api/comments";
 import { useRouter } from "next/navigation";
 
-const LawyerCardRating = ({ lawyerId }) => {
-  const [rating, setRating] = useState("...");
-
-  useEffect(() => {
-    let isMounted = true;
-    
-    const calculateRating = async () => {
-      if (!lawyerId) {
-        if (isMounted) setRating("N/A");
-        return;
-      }
-      try {
-        const comments = await fetchCommentsAction(lawyerId);
-        if (isMounted) {
-          if (comments && comments.length > 0) {
-            const validRatings = comments
-              .map(c => Number(c.rating || c.stars || 0))
-              .filter(r => !isNaN(r) && r > 0);
-            
-            if (validRatings.length > 0) {
-              const totalSum = validRatings.reduce((acc, curr) => acc + curr, 0);
-              setRating((totalSum / validRatings.length).toFixed(1));
-            } else {
-              setRating("N/A");
-            }
-          } else {
-            setRating("N/A");
-          }
-        }
-      } catch (err) {
-        console.error(`Telemetry error for ${lawyerId}:`, err);
-        if (isMounted) setRating("N/A");
-      }
-    };
-
-    calculateRating();
-    return () => { isMounted = false; };
-  }, [lawyerId]);
-
-  return (
-    <div className="flex items-center gap-1.5 font-mono text-[10px] text-gray-400 mt-4 mb-2">
-      <Star size={11} className="text-[#FCBA80] fill-[#FCBA80]/10 shrink-0" />
-      <span>Rating:</span>
-      <span className="text-gray-200 font-bold">
-        {rating} {rating !== "N/A" && rating !== "..." && "★"}
-      </span>
-    </div>
-  );
-};
+const CARDS_PER_PAGE = 12;
 
 const BrowseLawyersPage = () => {
   const router = useRouter();
@@ -66,6 +17,7 @@ const BrowseLawyersPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSpecialization, setSelectedSpecialization] = useState("all");
   const [sortBy, setSortBy] = useState("default");
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const loadDynamicCatalog = async () => {
@@ -81,16 +33,14 @@ const BrowseLawyersPage = () => {
         const resolvedLawyers = await Promise.all(
           rawLawyersList.map(async (lawyer) => {
             let imgUrl = "";
-
             if (lawyer.userId) {
               try {
                 const imgData = await GetUserImage(lawyer.userId);
                 imgUrl = imgData?.imageUrl || "";
               } catch (imgError) {
-                console.error("Failed to load user image payload:", imgError);
+                console.error(imgError);
               }
             }
-
             return {
               ...lawyer,
               profileImg: imgUrl,
@@ -110,6 +60,11 @@ const BrowseLawyersPage = () => {
     loadDynamicCatalog();
   }, []);
 
+  // Reset to page 1 whenever filters/search/sort changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedSpecialization, sortBy]);
+
   const filteredLawyers = lawyers
     .filter((lawyer) => {
       const nameMatch = lawyer.name?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
@@ -127,6 +82,33 @@ const BrowseLawyersPage = () => {
     });
 
   const specializations = ["all", ...new Set(lawyers.map((l) => l.specialization).filter(Boolean))];
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredLawyers.length / CARDS_PER_PAGE);
+  const startIndex = (currentPage - 1) * CARDS_PER_PAGE;
+  const paginatedLawyers = filteredLawyers.slice(startIndex, startIndex + CARDS_PER_PAGE);
+
+  const goToPage = (page) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Generate page number array with ellipsis logic
+  const getPageNumbers = () => {
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const pages = [];
+    if (currentPage <= 3) {
+      pages.push(1, 2, 3, 4, "...", totalPages);
+    } else if (currentPage >= totalPages - 2) {
+      pages.push(1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+    } else {
+      pages.push(1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages);
+    }
+    return pages;
+  };
 
   return (
     <div className="min-h-screen bg-[#050811] text-white selection:bg-[#FCBA80] selection:text-black px-4 sm:px-8 py-12">
@@ -193,42 +175,50 @@ const BrowseLawyersPage = () => {
             No expert litigators match parameters.
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {filteredLawyers.map((lawyer) => (
-              <div 
-                key={lawyer._id}
-                onClick={() => router.push(`/browseloyers/${lawyer._id}`)}
-                className="group border border-[#131B2E] bg-[#090D1A]/40 p-5 flex flex-col justify-between hover:border-[#FCBA80]/40 hover:bg-[#0a0f20]/60 transition-all duration-300 relative cursor-pointer"
-              >
-                <div>
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="w-12 h-12 bg-[#0A0F1D] border border-[#131B2E] flex items-center justify-center text-gray-400 overflow-hidden group-hover:border-[#FCBA80]/30 transition-colors">
-                      {lawyer.profileImg ? (
-                        <img 
-                          src={lawyer.profileImg} 
-                          alt={lawyer.name} 
-                          className="w-full h-full object-cover" 
-                          onError={(e) => { e.currentTarget.src = ""; }} 
-                        />
-                      ) : (
-                        <User size={18} className="stroke-1" />
-                      )}
+          <>
+            {/* Results count */}
+            <div className="flex items-center justify-between mb-6">
+              <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">
+                // Showing {startIndex + 1}–{Math.min(startIndex + CARDS_PER_PAGE, filteredLawyers.length)} of {filteredLawyers.length} counsel
+              </span>
+              <span className="text-[10px] font-mono text-gray-600 uppercase tracking-widest">
+                Page {currentPage} / {totalPages}
+              </span>
+            </div>
+
+            {/* Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {paginatedLawyers.map((lawyer) => (
+                <div 
+                  key={lawyer._id}
+                  onClick={() => router.push(`/browseloyers/${lawyer._id}`)}
+                  className="group border border-[#131B2E] bg-[#090D1A]/40 p-5 flex flex-col justify-between hover:border-[#FCBA80]/40 hover:bg-[#0a0f20]/60 transition-all duration-300 relative cursor-pointer"
+                >
+                  <div>
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="w-12 h-12 bg-[#0A0F1D] border border-[#131B2E] flex items-center justify-center text-gray-400 overflow-hidden group-hover:border-[#FCBA80]/30 transition-colors">
+                        {lawyer.profileImg ? (
+                          <img 
+                            src={lawyer.profileImg} 
+                            alt={lawyer.name} 
+                            className="w-full h-full object-cover" 
+                            onError={(e) => { e.currentTarget.src = ""; }} 
+                          />
+                        ) : (
+                          <User size={18} className="stroke-1" />
+                        )}
+                      </div>
+                      <span className={`text-[9px] font-mono border px-2 py-0.5 uppercase tracking-widest ${lawyer.isBusy ? "bg-red-950/40 border-red-900/40 text-red-400" : "bg-emerald-950/40 border-emerald-900/40 text-emerald-400"}`}>
+                        {lawyer.isBusy ? "Fully Booked" : "Available"}
+                      </span>
                     </div>
-                    <span className={`text-[9px] font-mono border px-2 py-0.5 uppercase tracking-widest ${lawyer.isBusy ? "bg-red-950/40 border-red-900/40 text-red-400" : "bg-emerald-950/40 border-emerald-900/40 text-emerald-400"}`}>
-                      {lawyer.isBusy ? "Fully Booked" : "Available"}
-                    </span>
+                    
+                    <h3 className="text-sm font-serif text-gray-200 uppercase tracking-wide group-hover:text-[#FCBA80] transition-colors">{lawyer.name}</h3>
+                    <p className="text-[10px] font-mono text-[#FCBA80]/80 uppercase mt-0.5">// {lawyer.specialization}</p>
+                    <p className="text-xs text-gray-400 font-light mt-3 line-clamp-3 leading-relaxed">{lawyer.bio}</p>
                   </div>
-                  
-                  <h3 className="text-sm font-serif text-gray-200 uppercase tracking-wide group-hover:text-[#FCBA80] transition-colors">{lawyer.name}</h3>
-                  <p className="text-[10px] font-mono text-[#FCBA80]/80 uppercase mt-0.5">// {lawyer.specialization}</p>
-                  <p className="text-xs text-gray-400 font-light mt-3 line-clamp-3 leading-relaxed">{lawyer.bio}</p>
-                </div>
 
-                <div>
-                  {/* Safely isolated self-fetching rating component */}
-                  <LawyerCardRating lawyerId={lawyer._id} />
-
-                  <div className="pt-4 border-t border-[#131B2E] flex items-center justify-between">
+                  <div className="pt-4 border-t border-[#131B2E] mt-4 flex items-center justify-between">
                     <div className="flex flex-col">
                       <span className="text-[8px] font-mono uppercase tracking-widest text-gray-500">Hourly Retainer</span>
                       <span className="text-xs font-mono text-gray-200">{lawyer.hourlyFee} {lawyer.currency || "BDT"}/hr</span>
@@ -246,10 +236,60 @@ const BrowseLawyersPage = () => {
                     </button>
                   </div>
                 </div>
+              ))}
+            </div>
 
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-12 flex items-center justify-center gap-2">
+                {/* Prev Button */}
+                <button
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="flex items-center gap-1.5 border border-[#131B2E] bg-[#0A0F1D] px-3 py-2 font-mono text-[10px] uppercase text-gray-400 hover:border-[#FCBA80]/40 hover:text-white transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft size={12} />
+                  Prev
+                </button>
+
+                {/* Page Numbers */}
+                <div className="flex items-center gap-1">
+                  {getPageNumbers().map((page, idx) =>
+                    page === "..." ? (
+                      <span
+                        key={`ellipsis-${idx}`}
+                        className="w-8 text-center font-mono text-[10px] text-gray-600"
+                      >
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        key={page}
+                        onClick={() => goToPage(page)}
+                        className={`w-8 h-8 font-mono text-[11px] border transition-all duration-200 ${
+                          currentPage === page
+                            ? "bg-[#FCBA80] text-black border-[#FCBA80] font-bold"
+                            : "bg-[#0A0F1D] text-gray-400 border-[#131B2E] hover:border-[#FCBA80]/40 hover:text-white"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    )
+                  )}
+                </div>
+
+                {/* Next Button */}
+                <button
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="flex items-center gap-1.5 border border-[#131B2E] bg-[#0A0F1D] px-3 py-2 font-mono text-[10px] uppercase text-gray-400 hover:border-[#FCBA80]/40 hover:text-white transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  Next
+                  <ChevronRight size={12} />
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>

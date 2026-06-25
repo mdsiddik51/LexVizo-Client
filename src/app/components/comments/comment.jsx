@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { useParams } from "next/navigation";
 import { fetchCommentsAction, postCommentAction } from "@/lib/actions/api/comments";
 import { GetUserImage } from "@/lib/actions/api/images";
+import { getClientRequestsAction } from "@/lib/actions/api/hiring";
 
 const CommentSection = ({ userRole, userSession }) => {
   const { id: lawyerId } = useParams();
@@ -18,6 +19,8 @@ const CommentSection = ({ userRole, userSession }) => {
   const [currentUserImage, setCurrentUserImage] = useState("");
   const [comments, setComments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasHired, setHasHired] = useState(false);
+  const [isHiringChecked, setIsHiringChecked] = useState(false);
 
   useEffect(() => {
     const showComments = async () => {
@@ -50,6 +53,29 @@ const CommentSection = ({ userRole, userSession }) => {
     };
     fetchUserImage();
   }, [currentUserId]);
+
+  useEffect(() => {
+    const verifyHiringRecord = async () => {
+      if (!currentUserId || !lawyerId) {
+        setHasHired(false);
+        setIsHiringChecked(true);
+        return;
+      }
+      try {
+        const history = await getClientRequestsAction(currentUserId);
+        const matches = history.some(
+          (item) => item.lawyerId === lawyerId && ["paid", "accepted"].includes(item.status)
+        );
+        setHasHired(matches);
+      } catch (err) {
+        console.error("Error verifying hiring record:", err);
+        setHasHired(false);
+      } finally {
+        setIsHiringChecked(true);
+      }
+    };
+    verifyHiringRecord();
+  }, [currentUserId, lawyerId]);
 
   const handlePostEvaluation = async (e) => {
     e.preventDefault();
@@ -91,7 +117,7 @@ const CommentSection = ({ userRole, userSession }) => {
       toast.success("Professional evaluation index updated.");
     } catch (error) {
       console.error(error);
-      toast.error("Failed to post comment feedback.");
+      toast.error("Failed to post comment feedback. Only clients who have hired this lawyer can comment.");
     }
   };
 
@@ -103,60 +129,77 @@ const CommentSection = ({ userRole, userSession }) => {
             Client Evaluation Hub
           </h2>
           <p className="text-xs font-mono text-gray-500 mt-1 leading-relaxed">
-            Authenticated Profile Identity: <span className="text-[#FCBA80] font-bold">"{currentUserName}"</span>
+            Authenticated Profile Identity: <span className="text-[#FCBA80] font-bold">{currentUserName}</span>
           </p>
         </div>
 
         {userSession?.data?.user ? (
-          <form onSubmit={handlePostEvaluation} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-mono uppercase tracking-wider text-gray-400 block">
-                // Performance Assessment
-              </label>
-              <div className="flex items-center gap-1.5">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    type="button"
-                    key={star}
-                    onClick={() => setRating(star)}
-                    onMouseEnter={() => setHoverRating(star)}
-                    onMouseLeave={() => setHoverRating(0)}
-                    className="transition-transform duration-100 active:scale-95 text-gray-600 focus:outline-none"
-                  >
-                    <Star
-                      size={16}
-                      className={`${
-                        star <= (hoverRating || rating)
-                          ? "fill-[#FCBA80] stroke-[#FCBA80]"
-                          : "stroke-gray-700 fill-transparent"
-                      } transition-colors`}
-                    />
-                  </button>
-                ))}
-                <span className="text-[10px] font-mono text-gray-400 ml-2">
-                  ({rating}/5)
-                </span>
+          !isHiringChecked ? (
+            <div className="border border-dashed border-[#131B2E] bg-[#090D1A]/20 p-5 text-center animate-pulse">
+              <p className="text-[10px] font-mono text-gray-600 uppercase tracking-wider">
+                // Verifying retainer history...
+              </p>
+            </div>
+          ) : hasHired ? (
+            <form onSubmit={handlePostEvaluation} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-mono uppercase tracking-wider text-gray-400 block">
+                  // Performance Assessment
+                </label>
+                <div className="flex items-center gap-1.5">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      type="button"
+                      key={star}
+                      onClick={() => setRating(star)}
+                      onMouseEnter={() => setHoverRating(star)}
+                      onMouseLeave={() => setHoverRating(0)}
+                      className="transition-transform duration-100 active:scale-95 text-gray-600 focus:outline-none"
+                    >
+                      <Star
+                        size={16}
+                        className={`${
+                          star <= (hoverRating || rating)
+                            ? "fill-[#FCBA80] stroke-[#FCBA80]"
+                            : "stroke-gray-700 fill-transparent"
+                        } transition-colors`}
+                      />
+                    </button>
+                  ))}
+                  <span className="text-[10px] font-mono text-gray-400 ml-2">
+                    ({rating}/5)
+                  </span>
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-1.5">
-              <textarea
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Record strategic details of engagement performance..."
-                rows={4}
-                className="w-full bg-[#0A0F1D] border border-[#131B2E] text-xs font-mono text-white p-3 focus:outline-none focus:border-[#FCBA80]/40 placeholder-gray-600 transition-colors"
-                required
-              />
-            </div>
+              <div className="space-y-1.5">
+                <textarea
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Record strategic details of engagement performance..."
+                  rows={4}
+                  className="w-full bg-[#0A0F1D] border border-[#131B2E] text-xs font-mono text-white p-3 focus:outline-none focus:border-[#FCBA80]/40 placeholder-gray-600 transition-colors"
+                  required
+                />
+              </div>
 
-            <button
-              type="submit"
-              className="flex items-center gap-2 border border-[#131B2E] bg-[#0A0F1D] px-4 py-2 font-mono text-[10px] text-gray-300 uppercase hover:border-[#FCBA80] hover:text-black hover:bg-[#FCBA80] transition-all duration-300"
-            >
-              File Case Briefing <Send size={10} />
-            </button>
-          </form>
+              <button
+                type="submit"
+                className="flex items-center gap-2 border border-[#131B2E] bg-[#0A0F1D] px-4 py-2 font-mono text-[10px] text-gray-300 uppercase hover:border-[#FCBA80] hover:text-black hover:bg-[#FCBA80] transition-all duration-300"
+              >
+                File Case Briefing <Send size={10} />
+              </button>
+            </form>
+          ) : (
+            <div className="border border-dashed border-[#131B2E] bg-[#090D1A]/20 p-5 text-center">
+              <p className="text-[10px] font-mono text-[#FCBA80] uppercase tracking-wider">
+                // Evaluation Locked: Active Retainer Required
+              </p>
+              <p className="text-xs text-gray-500 font-sans mt-2 leading-relaxed">
+                You can only submit evaluation comments after successfully hiring this lawyer and having your request accepted or paid.
+              </p>
+            </div>
+          )
         ) : (
           <div className="border border-dashed border-[#131B2E] bg-[#090D1A]/20 p-4 text-center">
             <p className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">

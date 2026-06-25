@@ -1,11 +1,12 @@
 'use server';
+import { getAuthHeaders } from "./authHeaders";
 
-const BaseUrl = process.env.NEXT_URI;
+const BaseUrl = process.env.NEXT_PUBLIC_API_URL ;
 export const createHiringRequestAction = async (payload) => {
     try {
         const response = await fetch(`${BaseUrl}/api/hiring`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: await getAuthHeaders(),
             body: JSON.stringify(payload),
         });
 
@@ -21,12 +22,11 @@ export const createHiringRequestAction = async (payload) => {
     }
 };
 
-
 export const updateRequestStatusAction = async (requestId, decision) => {
     try {
         const response = await fetch(`${BaseUrl}/api/hiring/${requestId}`, {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
+            headers: await getAuthHeaders(),
             body: JSON.stringify({ status: decision }),
         });
         return await response.json();
@@ -40,8 +40,8 @@ export const completeHiringPaymentAction = async (requestId, paymentDetails) => 
     try {
         const response = await fetch(`${BaseUrl}/api/hiring/${requestId}/payment`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ status: "paid", paymentDetails }),
+            headers: await getAuthHeaders(),
+            body: JSON.stringify({ status: "paid", paymentDetails, sessionId: paymentDetails }),
         });
         return await response.json();
     } catch (error) {
@@ -49,13 +49,14 @@ export const completeHiringPaymentAction = async (requestId, paymentDetails) => 
         throw new Error("Failed to log payment validation confirmation.");
     }
 };
+
 export const getPendingRequestsAction = async (lawyerId) => {
     try {
         if (!lawyerId) throw new Error("Lawyer identification id required.");
 
         const response = await fetch(`${BaseUrl}/api/hiring?lawyerId=${lawyerId}`, {
             method: "GET",
-            headers: { "Content-Type": "application/json" },
+            headers: await getAuthHeaders(),
             next: { revalidate: 0 } 
         });
 
@@ -76,7 +77,7 @@ export const getClientRequestsAction = async (clientId) => {
 
         const response = await fetch(`${BaseUrl}/api/hiring?clientId=${clientId}`, {
             method: "GET",
-            headers: { "Content-Type": "application/json" },
+            headers: await getAuthHeaders(),
             next: { revalidate: 0 } 
         });
 
@@ -90,13 +91,14 @@ export const getClientRequestsAction = async (clientId) => {
         return [];
     }
 };
+
 export const getLawyerRequestsAction = async (lawyerId) => {
   try {
     if (!lawyerId) throw new Error("Lawyer identification id required.");
 
     const response = await fetch(`${BaseUrl}/api/hiring?lawyerId=${lawyerId}`, {
       method: "GET",
-      headers: { "Content-Type": "application/json" },
+      headers: await getAuthHeaders(),
       next: { revalidate: 0 } 
     });
 

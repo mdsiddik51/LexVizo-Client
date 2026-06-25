@@ -1,16 +1,14 @@
 'use server'
 import { revalidatePath } from "next/cache";
+import { getAuthHeaders } from "./authHeaders";
 
-const BaseUrl = process.env.NEXT_URI;
-
+const BaseUrl = process.env.NEXT_PUBLIC_API_URL ;
 // 1. INSERT SERVICE ACTION
 export const insertServiceData = async (serviceFields) => {
     try {
         const response = await fetch(`${BaseUrl}/api/service`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: await getAuthHeaders(),
             body: JSON.stringify(serviceFields),
         });
 
@@ -37,9 +35,7 @@ export const updateServiceData = async (serviceId, updatedFields) => {
     try {
         const response = await fetch(`${BaseUrl}/api/service/${serviceId}`, {
             method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: await getAuthHeaders(),
             body: JSON.stringify(updatedFields),
         });
 
@@ -69,9 +65,7 @@ export const deleteServiceData = async (serviceId) => {
     try {
         const response = await fetch(`${BaseUrl}/api/service/${serviceId}`, {
             method: "DELETE",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: await getAuthHeaders(),
             body: JSON.stringify({ serviceId }),
         });
 
@@ -96,12 +90,10 @@ export const deleteServiceData = async (serviceId) => {
     }
 }
 
-
 export const fetchServiceData = async (userId) => {
     try {
         if (!userId) throw new Error("Missing targeted user query context.");
 
-        // FIX: Swapped the slash path to a query string parameter matching request.query
         const response = await fetch(`${BaseUrl}/api/service?userId=${userId}`, {
             method: "GET",
             headers: {

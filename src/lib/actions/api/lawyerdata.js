@@ -1,6 +1,8 @@
 'use server'
 import { revalidatePath } from "next/cache";
-const BaseUrl = process.env.NEXT_URI;
+import { getAuthHeaders } from "./authHeaders";
+
+const BaseUrl = process.env.NEXT_PUBLIC_API_URL ;
 export const GetLawyerData = async (userid) => {
     const response = await fetch(`${BaseUrl}/api/lawyer/${userid}`);
     const data = await response.json();
@@ -11,9 +13,7 @@ export const updateLawyerData = async (userId, updatedFields) => {
     try {
         const response = await fetch(`${BaseUrl}/api/lawyer/${userId}`, {
             method: "PATCH",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: await getAuthHeaders(),
             body: JSON.stringify(updatedFields),
         });
 

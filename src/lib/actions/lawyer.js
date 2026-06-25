@@ -1,7 +1,6 @@
 'use server';
 
-
-const BaseUrl = process.env.NEXT_URI ;
+const BaseUrl = process.env.NEXT_PUBLIC_API_URL ;
 
 export const LawyerProfile = async (NewLawyer) => {
     try {
@@ -26,11 +25,12 @@ export const LawyerProfile = async (NewLawyer) => {
 
 export const fetchLawyersList = async () => {
   try {
-    const response = await fetch(`${BaseUrl}/api/collectawyer`, {
+    const response = await fetch(`${BaseUrl}/api/collectlawyer`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
+      cache: 'no-store',
     });
 
     if (!response.ok) {

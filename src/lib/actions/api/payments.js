@@ -1,38 +1,29 @@
-import Swal from 'sweetalert2'; 
+import { getAuthHeaders } from "./authHeaders";
 
-const BaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const BaseUrl = process.env.NEXT_PUBLIC_API_URL ;
 
-export const handlePayment = async (hiringRequestId) => {
+export const handlePayment = async (id) => {
   try {
-    const response = await fetch(`${BaseUrl}/api/payment/create-checkout-session`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await fetch(
+      `${BaseUrl}/api/payment/create-checkout-session`,
+      {
+        method: "POST",
+        headers: await getAuthHeaders(),
+        body: JSON.stringify({ hiringId: id }),
       },
-      body: JSON.stringify({
-        hiringId: hiringRequestId,
-      }),
-    });
+    );
+
+    const responseData = await response.json();
 
     if (!response.ok) {
-      const errorText = await response.text();
-      try {
-        const errorJson = JSON.parse(errorText);
-        throw new Error(errorJson.error || "Server error occurred");
-      } catch {
-        throw new Error(`Server status fault: ${response.status}`);
-      }
+      return { error: responseData.error, details: responseData.details || "Server error" };
     }
 
-    const data = await response.json();
-
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      Swal.fire('Error', data.error || 'Failed to initialize payment.', 'error');
+    if (responseData.url) {
+      return { url: responseData.url };
     }
   } catch (error) {
-    console.error("Payment redirect error:", error);
-    Swal.fire('Error', error.message || 'Something went wrong. Try again.', 'error');
+    console.error("Fetch API error:", error);
+    return { error: error.message };
   }
 };

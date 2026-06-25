@@ -1,17 +1,14 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import {
-  ShieldCheck,
   User,
   Calendar,
   DollarSign,
-  Clock,
   ArrowLeft,
   X,
   ShieldAlert,
   ArrowUpRight,
   Briefcase,
-  CheckCircle2,
   Star,
   EyeOff
 } from "lucide-react";
@@ -30,7 +27,7 @@ const LawyerDetailsPage = () => {
   const { id } = useParams();
 
   const userSession = useSession();
-  const userRole = "client";
+  const userRole = userSession?.data?.user?.role || "client";
 
   const currentUserId = userSession?.data?.user?.id;
   const currentUserName = userSession?.data?.user?.name;
@@ -184,6 +181,7 @@ const LawyerDetailsPage = () => {
       clientEmail: currentUserEmail || "",
       lawyerId: lawyer._id,
       lawyerUserId: lawyer.userId,
+      lawyerEmail: lawyer.email || "",
       lawyerName: lawyer.name || "Unknown Professional",
       lawyerImage: lawyer.profileImg || "", 
       caseType: hasPackage ? selectedService.title : (lawyer.specialization || "General Legal Counsel"),
