@@ -60,7 +60,6 @@ const Register = () => {
     <div className="min-h-screen bg-[#0A0B0D] text-[#F3F4F6] font-sans flex flex-col justify-between selection:bg-[#FF9500] selection:text-black">
       <main className="flex-1 flex items-center justify-center px-4 py-12 lg:py-20">
         <div className="w-full max-w-5xl grid md:grid-cols-12 gap-0 border border-gray-900 rounded-sm overflow-hidden shadow-2xl bg-[#0C0D0F]">
-      
           <div className="md:col-span-5 p-8 lg:p-12 bg-linear-to-br from-[#0F1115] to-[#07080A] flex flex-col justify-between border-b md:border-b-0 md:border-r border-gray-900">
             <div>
               <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[#FF9500] font-semibold mb-8">
@@ -87,21 +86,18 @@ const Register = () => {
             </div>
           </div>
 
-      
           <div className="md:col-span-7 p-8 lg:p-12 flex flex-col justify-center">
-        
             {step === 1 && (
               <div>
                 <div className="mb-8">
                   <div className="text-[10px] uppercase tracking-[0.15em] text-[#FF9500] font-medium mb-1">
-                    // Initialization
+                    {"// Initialization"}
                   </div>
                   <h3 className="text-xl font-medium text-white">
                     Create Account
                   </h3>
                 </div>
 
-      
                 <button
                   onClick={handleGoogleLogin}
                   type="button"
@@ -235,12 +231,11 @@ const Register = () => {
               </div>
             )}
 
-         
             {step === 2 && (
               <div>
                 <div className="mb-6">
                   <div className="text-[10px] uppercase tracking-[0.15em] text-[#FF9500] font-medium mb-1">
-                    // Global Strategy
+                    {"// Global Strategy"}
                   </div>
                   <h3 className="text-xl font-medium text-white">
                     Select Your Vector
@@ -252,7 +247,6 @@ const Register = () => {
 
                 <form onSubmit={onSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        
                     <div
                       onClick={() => setRole("client")}
                       className={`cursor-pointer p-5 border rounded-sm transition-all flex flex-col justify-between h-40 bg-[#0A0B0D] ${
@@ -291,7 +285,6 @@ const Register = () => {
                       </div>
                     </div>
 
-         
                     <div
                       onClick={() => setRole("lawyer")}
                       className={`cursor-pointer p-5 border rounded-sm transition-all flex flex-col justify-between h-40 bg-[#0A0B0D] ${
@@ -358,7 +351,7 @@ const Register = () => {
 
             <div className="mt-8 text-center">
               <p className="text-xs text-gray-500">
-                Already have an account? {" "}
+                Already have an account?{" "}
                 <Link
                   href="/auth/login"
                   className="text-white hover:text-[#FF9500] underline underline-offset-4 transition"
